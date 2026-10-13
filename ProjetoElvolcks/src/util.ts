@@ -1,0 +1,57 @@
+import { totalLanc } from './mock'
+import type { Lancamento } from './types'
+
+export { totalLanc }
+
+const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+export const dinheiro = (v: number) => brl.format(v)
+
+export const qtd = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+
+export const dataHora = (iso: string) =>
+  new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+
+export const dataCurta = (d: Date | string) =>
+  new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+export const hora = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+export const chaveDia = (d: Date | string) => {
+  const x = new Date(d)
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
+}
+export const chaveMes = (d: Date | string) => chaveDia(d).slice(0, 7)
+
+export const ehHoje = (iso: string) => chaveDia(iso) === chaveDia(new Date())
+
+export const nomeMes = (chave: string) => {
+  const [a, m] = chave.split('-').map(Number)
+  const s = new Date(a, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+export const ultimosMeses = (n: number) =>
+  Array.from({ length: n }, (_, i) => {
+    const d = new Date()
+    return chaveMes(new Date(d.getFullYear(), d.getMonth() - i, 1))
+  })
+
+/** Lançamentos que entram no caixa: vendas e serviços não cancelados. */
+export const entraNoCaixa = (l: Lancamento) => l.tipo !== 'orcamento' && l.situacao !== 'cancelado'
+
+export const subtotalPecas = (l: Pick<Lancamento, 'itens'>) => l.itens.reduce((s, i) => s + i.quantidade * i.preco, 0)
+
+export const comissao = (l: Lancamento) => (l.maoDeObra * l.comissaoPct) / 100
+
+export const validadeOrcamento = (l: Lancamento) => new Date(new Date(l.criadoEm).getTime() + 7 * 864e5)
+
+export const orcamentoVencido = (l: Lancamento) => l.tipo === 'orcamento' && l.situacao === 'ativo' && validadeOrcamento(l) < new Date()
+
+export const NOME_TIPO = { orcamento: 'Orçamento', venda: 'Venda', servico: 'Serviço realizado' } as const
+
+export const LOJA = {
+  nome: 'Elvolcks Auto Som',
+  endereco: 'Rua J, nº 165, Setor Bela Vista, Barra do Garças – MT',
+  whatsapp: '(66) 99956-0726',
+  cnpj: 'CNPJ a definir',
+}

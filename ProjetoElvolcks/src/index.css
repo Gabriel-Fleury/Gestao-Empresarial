@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-sans: 'Source Sans 3', system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+html,
+body {
+  background: var(--color-slate-100);
+  color: var(--color-slate-800);
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  html,
+  body {
+    background: white;
+  }
+}
