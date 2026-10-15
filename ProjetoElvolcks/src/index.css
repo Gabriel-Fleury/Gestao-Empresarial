@@ -17,6 +17,20 @@ textarea {
   font: inherit;
 }
 
+/* Mãozinha em tudo que é clicável */
+button:not(:disabled),
+[role='button'],
+[role='tab'],
+a[href],
+select:not(:disabled),
+summary,
+label:has(> input[type='checkbox']),
+input[type='checkbox'],
+input[type='radio'],
+input[type='date'] {
+  cursor: pointer;
+}
+
 @media print {
   @page {
     size: A4;

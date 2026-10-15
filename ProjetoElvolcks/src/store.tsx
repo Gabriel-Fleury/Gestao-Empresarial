@@ -1,14 +1,27 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
-import { colaboradores, dadosIniciais, produtosIniciais } from './mock'
-import type { Alteracao, Colaborador, Lancamento, MovEstoque, Produto, TipoMov } from './types'
+import { colaboradores as colaboradoresIniciais, dadosIniciais, produtosIniciais } from './mock'
+import type { Alteracao, Colaborador, Funcao, Lancamento, MovEstoque, Produto, TipoMov } from './types'
 
 export const AVISO_ADMIN = 'Apenas administradores podem ver/fazer isso'
 
 export type NovoLancamento = Omit<Lancamento, 'id' | 'numero' | 'situacao' | 'criadoPor' | 'criadoEm'>
 
+export interface DadosPessoa {
+  nome: string
+  funcoes: Funcao[]
+  usuario: string
+  /** Vazio ao editar = mantém a senha atual */
+  senha: string
+}
+
 interface Store {
+  logado: boolean
+  /** Só use nas telas internas (depois do login) */
   usuario: Colaborador
-  setUsuarioId: (id: number) => void
+  entrar: (usuario: string, senha: string) => string | null
+  sair: () => void
+  salvarPessoa: (id: number | null, dados: DadosPessoa) => string | null
+  alternarAtivo: (id: number) => void
   isAdmin: boolean
   colaboradores: Colaborador[]
   produtos: Produto[]
@@ -30,7 +43,8 @@ interface Store {
 const Ctx = createContext<Store | null>(null)
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [usuarioId, setUsuarioId] = useState(1)
+  const [usuarioId, setUsuarioId] = useState<number | null>(null)
+  const [colaboradores, setColaboradores] = useState(colaboradoresIniciais)
   const [produtos, setProdutos] = useState(produtosIniciais)
   const [lancamentos, setLancamentos] = useState(dadosIniciais.lancs)
   const [movimentacoes, setMovs] = useState(dadosIniciais.movs)
@@ -39,7 +53,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<Store['toast']>(null)
 
   const usuario = colaboradores.find((c) => c.id === usuarioId)!
-  const isAdmin = usuario.funcoes.includes('admin')
+  const logado = !!usuario?.ativo
+  const isAdmin = logado && usuario.funcoes.includes('admin')
 
   const timer = useRef<number>(undefined)
   const avisar = useCallback((texto: string, tipo: 'ok' | 'erro' = 'ok') => {
@@ -59,7 +74,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setMovs((ms) => [
       ...itens.map((i, k) => ({
         id: Date.now() + k, produtoId: i.produtoId, tipo, quantidade: sinal * i.quantidade,
-        colaboradorId: usuarioId, data: agora, lancamentoNumero: ref,
+        colaboradorId: usuario.id, data: agora, lancamentoNumero: ref,
       })),
       ...ms,
     ])
@@ -69,7 +84,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const numero = numeros[dados.tipo] + 1
     setNumeros((n) => ({ ...n, [dados.tipo]: numero }))
     const novo: Lancamento = {
-      ...dados, id: Date.now(), numero, situacao: 'ativo', criadoPor: usuarioId, criadoEm: new Date().toISOString(),
+      ...dados, id: Date.now(), numero, situacao: 'ativo', criadoPor: usuario.id, criadoEm: new Date().toISOString(),
     }
     setLancamentos((ls) => {
       const lista = [novo, ...ls]
@@ -83,7 +98,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const registrar = (lancamentoId: number, descricao: string) =>
     setAlteracoes((as) => [
-      { id: Date.now(), lancamentoId, colaboradorId: usuarioId, data: new Date().toISOString(), descricao },
+      { id: Date.now(), lancamentoId, colaboradorId: usuario.id, data: new Date().toISOString(), descricao },
       ...as,
     ])
 
@@ -114,8 +129,52 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (quantidade) mexerEstoque([{ produtoId: id, quantidade }], 'entrada', 1)
   }
 
+  // Login do protótipo: confere usuário e senha na lista em memória (sem segurança real)
+  const entrar = (login: string, senha: string) => {
+    const c = colaboradores.find((x) => x.usuario === login.trim().toLowerCase())
+    if (!c || c.senha !== senha) return 'Usuário ou senha incorretos.'
+    if (!c.ativo) return 'Sua conta está desativada. Fale com um administrador.'
+    setUsuarioId(c.id)
+    return null
+  }
+
+  const salvarPessoa = (id: number | null, d: DadosPessoa) => {
+    if (!isAdmin) return AVISO_ADMIN
+    const nome = d.nome.trim()
+    const login = d.usuario.trim().toLowerCase()
+    if (nome.length < 2) return 'Informe o nome.'
+    if (!d.funcoes.length) return 'Escolha pelo menos uma função.'
+    if (id === usuarioId && !d.funcoes.includes('admin')) return 'Você não pode tirar o seu próprio acesso de administrador.'
+    if (login) {
+      if (!/^[a-z0-9._-]{3,20}$/.test(login)) return 'Usuário: de 3 a 20 letras minúsculas, números, ponto, hífen ou _ (sem espaço nem acento).'
+      if (colaboradores.some((c) => c.id !== id && c.usuario === login)) return 'Esse usuário já existe. Escolha outro.'
+      const atual = colaboradores.find((c) => c.id === id)
+      if (!d.senha && !atual?.senha) return 'Defina uma senha para o acesso.'
+    }
+    if (d.senha && d.senha.length < 4) return 'A senha precisa ter pelo menos 4 caracteres.'
+    const acesso = login ? { usuario: login, temLogin: true } : { usuario: undefined, senha: undefined, temLogin: false }
+    if (id === null) {
+      const novoId = Math.max(0, ...colaboradores.map((c) => c.id)) + 1
+      setColaboradores((cs) => [...cs, { id: novoId, nome, funcoes: d.funcoes, ativo: true, comissaoPadrao: 50, ...acesso, ...(login && { senha: d.senha }) }])
+      avisar(`${nome} cadastrado${login ? ` — já pode entrar como "${login}"` : ''}`)
+    } else {
+      setColaboradores((cs) => cs.map((c) => (c.id === id ? { ...c, nome, funcoes: d.funcoes, ...acesso, ...(login && d.senha && { senha: d.senha }) } : c)))
+      avisar('Dados salvos')
+    }
+    return null
+  }
+
+  const alternarAtivo = (id: number) => {
+    if (!isAdmin) return avisar(AVISO_ADMIN, 'erro')
+    if (id === usuarioId) return avisar('Você não pode desativar a sua própria conta.', 'erro')
+    const c = colaboradores.find((x) => x.id === id)
+    if (!c) return
+    setColaboradores((cs) => cs.map((x) => (x.id === id ? { ...x, ativo: !x.ativo } : x)))
+    avisar(`${c.nome} ${c.ativo ? 'desativado — não consegue mais entrar' : 'reativado'}`)
+  }
+
   const value: Store = {
-    usuario, setUsuarioId, isAdmin, colaboradores, produtos, lancamentos, movimentacoes, alteracoes, toast, avisar,
+    logado, usuario, isAdmin, entrar, sair: () => setUsuarioId(null), salvarPessoa, alternarAtivo, colaboradores, produtos, lancamentos, movimentacoes, alteracoes, toast, avisar,
     avisoAdmin: () => avisar(AVISO_ADMIN, 'erro'),
     lancar, cancelar, editar, movimentarEstoque, novoProduto,
     produto: (id) => produtos.find((p) => p.id === id),

@@ -125,6 +125,44 @@ export function Campo({ rotulo, children, className = '' }: { rotulo: string; ch
 export const inputCls =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100'
 
+/** Limite de caracteres para nome do cliente e veículo. */
+export const MAX_TEXTO = 30
+/** Limite da descrição do serviço. */
+export const MAX_DESCRICAO = 300
+
+const fmtValor = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const lerValor = (s: string) => {
+  const limpo = s.replace(/[^\d,.]/g, '')
+  const n = limpo.includes(',') ? +limpo.replace(/\./g, '').replace(',', '.') : +limpo
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0
+}
+
+/** Campo de valor em reais: mostra 389,00 e aceita digitar com vírgula ou ponto. */
+export function InputDinheiro({ valor, aoMudar, vazioSeZero, className = '', readOnly }: { valor: number; aoMudar?: (v: number) => void; vazioSeZero?: boolean; className?: string; readOnly?: boolean }) {
+  const [texto, setTexto] = useState<string | null>(null)
+  const exibido = texto ?? (vazioSeZero && !valor ? '' : fmtValor(valor))
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      className={`${inputCls} tabular-nums ${className}`}
+      placeholder="0,00"
+      readOnly={readOnly}
+      value={exibido}
+      onFocus={(e) => {
+        if (readOnly) return
+        setTexto(vazioSeZero && !valor ? '' : fmtValor(valor))
+        e.target.select()
+      }}
+      onChange={(e) => {
+        setTexto(e.target.value)
+        aoMudar?.(lerValor(e.target.value))
+      }}
+      onBlur={() => setTexto(null)}
+    />
+  )
+}
+
 export function Cadeado() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>

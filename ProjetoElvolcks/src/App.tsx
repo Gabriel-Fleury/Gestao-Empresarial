@@ -6,6 +6,7 @@ import { Colaboradores } from './pages/Colaboradores'
 import { Estoque } from './pages/Estoque'
 import { Inicio } from './pages/Inicio'
 import { Lancamentos } from './pages/Lancamentos'
+import { Login } from './pages/Login'
 import { Relatorios } from './pages/Relatorios'
 import { StoreProvider, useStore } from './store'
 import type { TipoLanc } from './types'
@@ -35,18 +36,20 @@ const MENU: { id: Pagina; nome: string; admin?: boolean }[] = [
 ]
 
 function Shell() {
-  const { usuario, isAdmin, avisoAdmin, colaboradores, setUsuarioId, toast } = useStore()
+  const { usuario, isAdmin, avisoAdmin, sair, toast } = useStore()
   const [pagina, setPagina] = useState<Pagina>('inicio')
   const [menuAberto, setMenuAberto] = useState(false)
+  // Muda a cada clique no menu: reabrir a mesma página volta ao início dela (ex.: sai do histórico do colaborador)
+  const [visita, setVisita] = useState(0)
   const [novo, setNovo] = useState<{ tipo: TipoLanc } | null>(null)
 
   const ir = (p: Pagina) => {
     if (MENU.find((m) => m.id === p)?.admin && !isAdmin) return avisoAdmin()
     setPagina(p)
+    setVisita((v) => v + 1)
     setMenuAberto(false)
     window.scrollTo(0, 0)
   }
-  const comLogin = colaboradores.filter((c) => c.temLogin)
 
   return (
     <div className="min-h-screen lg:pl-64">
@@ -75,12 +78,19 @@ function Shell() {
             ))}
           </nav>
           <div className="border-t border-white/10 p-4">
-            <label className="mb-1 block text-[11px] font-semibold tracking-wider text-slate-500 uppercase">Testar como (protótipo)</label>
-            <select value={usuario.id} onChange={(e) => { setUsuarioId(+e.target.value); if (pagina === 'caixa') setPagina('inicio') }} className="w-full rounded-lg border border-white/10 bg-slate-900 px-2 py-2 text-sm text-white">
-              {comLogin.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome} — {c.funcoes.includes('admin') ? 'Administrador' : 'Funcionário'}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-3">
+              <div className="grid size-9 shrink-0 place-items-center rounded-full bg-blue-700 text-sm font-bold text-white">
+                {usuario.nome.split(' ').map((p) => p[0]).slice(0, 2).join('')}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-white">{usuario.nome}</div>
+                <div className="text-xs text-slate-400">{isAdmin ? 'Administrador' : 'Funcionário'}</div>
+              </div>
+            </div>
+            <button onClick={sair} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/5 hover:text-white">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" /></svg>
+              Sair
+            </button>
           </div>
         </aside>
         {menuAberto && <div className="fixed inset-0 z-20 bg-slate-900/50 lg:hidden" onClick={() => setMenuAberto(false)} />}
@@ -103,7 +113,7 @@ function Shell() {
           {pagina === 'vendas' && <Lancamentos key="v" tipo="venda" novoLancamento={(tipo) => setNovo({ tipo })} />}
           {pagina === 'orcamentos' && <Lancamentos key="o" tipo="orcamento" novoLancamento={(tipo) => setNovo({ tipo })} />}
           {pagina === 'servicos' && <Lancamentos key="s" tipo="servico" novoLancamento={(tipo) => setNovo({ tipo })} />}
-          {pagina === 'colaboradores' && <Colaboradores />}
+          {pagina === 'colaboradores' && <Colaboradores key={visita} />}
           {pagina === 'estoque' && <Estoque />}
           {pagina === 'caixa' && isAdmin && <Caixa />}
           {pagina === 'relatorios' && <Relatorios />}
@@ -125,7 +135,13 @@ function Shell() {
 export default function App() {
   return (
     <StoreProvider>
-      <Shell />
+      <Portao />
     </StoreProvider>
   )
+}
+
+/** Sem login, nada do sistema aparece: só a tela de entrar. */
+function Portao() {
+  const { logado } = useStore()
+  return logado ? <Shell /> : <Login />
 }

@@ -17,10 +17,10 @@ export function Caixa() {
 
   return (
     <>
-      <Titulo acao={<input type="date" className={`${inputCls} w-auto`} value={dia} max={hoje} onChange={(e) => setDia(e.target.value || hoje)} />}>
+      <Titulo acao={<input type="date" className={`${inputCls} w-auto!`} value={dia} max={hoje} onChange={(e) => setDia(e.target.value || hoje)} />}>
         Caixa
       </Titulo>
-      <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_2fr]">
         <Painel>
           <div className="p-5">
             <div className="text-xs font-semibold tracking-wide text-slate-500 uppercase">{dia === hoje ? 'Entrou hoje' : `Entrou em ${new Date(dia + 'T12:00').toLocaleDateString('pt-BR')}`}</div>

@@ -30,6 +30,17 @@ export const nomeMes = (chave: string) => {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+/** Segunda-feira da semana atual (AAAA-MM-DD). */
+export const inicioSemana = () => {
+  const d = new Date()
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  return chaveDia(d)
+}
+
+/** Período dos filtros: 'hoje', 'semana', 'tudo' ou um mês ('AAAA-MM'). */
+export const noPeriodo = (iso: string, periodo: string) =>
+  periodo === 'tudo' ? true : periodo === 'hoje' ? ehHoje(iso) : periodo === 'semana' ? chaveDia(iso) >= inicioSemana() : chaveMes(iso) === periodo
+
 export const ultimosMeses = (n: number) =>
   Array.from({ length: n }, (_, i) => {
     const d = new Date()
@@ -53,5 +64,5 @@ export const LOJA = {
   nome: 'Elvolcks Auto Som',
   endereco: 'Rua J, nº 165, Setor Bela Vista, Barra do Garças – MT',
   whatsapp: '(66) 99956-0726',
-  cnpj: 'CNPJ a definir',
+  cnpj: 'CNPJ 18.980.124/0001-46',
 }

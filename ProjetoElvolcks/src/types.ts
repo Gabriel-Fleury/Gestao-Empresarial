@@ -7,6 +7,9 @@ export interface Colaborador {
   temLogin: boolean
   ativo: boolean
   comissaoPadrao: number
+  /** Login do protótipo (só visual, sem segurança real) */
+  usuario?: string
+  senha?: string
 }
 
 export interface Produto {
@@ -54,6 +57,8 @@ export interface Lancamento {
   numero: number
   cliente: string
   veiculo: string
+  /** Serviço realizado: o que foi feito (ex.: montagem de peça trazida pelo cliente) */
+  descricao?: string
   itens: Item[]
   maoDeObra: number
   instaladorId?: number

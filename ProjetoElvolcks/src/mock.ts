@@ -17,10 +17,10 @@ const pick = <T,>(arr: T[]) => arr[Math.floor(rnd() * arr.length)]
 const chance = (p: number) => rnd() < p
 
 export const colaboradores: Colaborador[] = [
-  { id: 1, nome: 'Elvis Volcks', funcoes: ['admin', 'vende', 'instala'], temLogin: true, ativo: true, comissaoPadrao: 0 },
-  { id: 2, nome: 'Carla Volcks', funcoes: ['admin', 'vende'], temLogin: true, ativo: true, comissaoPadrao: 0 },
-  { id: 3, nome: 'Rafael Souza', funcoes: ['vende', 'instala'], temLogin: true, ativo: true, comissaoPadrao: 10 },
-  { id: 4, nome: 'Marcos Lima', funcoes: ['vende'], temLogin: true, ativo: true, comissaoPadrao: 0 },
+  { id: 1, nome: 'Elvis Volcks', funcoes: ['admin', 'vende', 'instala'], temLogin: true, ativo: true, comissaoPadrao: 0, usuario: 'elvis', senha: '1234' },
+  { id: 2, nome: 'Carla Volcks', funcoes: ['admin', 'vende'], temLogin: true, ativo: true, comissaoPadrao: 0, usuario: 'carla', senha: '1234' },
+  { id: 3, nome: 'Rafael Souza', funcoes: ['vende', 'instala'], temLogin: true, ativo: true, comissaoPadrao: 10, usuario: 'rafael', senha: '1234' },
+  { id: 4, nome: 'Marcos Lima', funcoes: ['vende'], temLogin: true, ativo: true, comissaoPadrao: 0, usuario: 'marcos', senha: '1234' },
   { id: 5, nome: 'Diego Ferreira', funcoes: ['instala'], temLogin: false, ativo: true, comissaoPadrao: 15 },
 ]
 

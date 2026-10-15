@@ -34,7 +34,7 @@ export function Relatorios() {
 
   return (
     <>
-      <Titulo acao={<select className={`${inputCls} w-auto`} value={mes} onChange={(e) => setMes(e.target.value)}>{meses.map((m) => <option key={m} value={m}>{nomeMes(m)}</option>)}</select>}>
+      <Titulo acao={<select className={`${inputCls} w-auto!`} value={mes} onChange={(e) => setMes(e.target.value)}>{meses.map((m) => <option key={m} value={m}>{nomeMes(m)}</option>)}</select>}>
         Relatórios
       </Titulo>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

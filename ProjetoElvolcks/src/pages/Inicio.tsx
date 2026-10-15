@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BuscaPecas } from '../components/BuscaPecas'
 import { Detalhe } from '../components/Detalhe'
 import { Cadeado, Painel, Selo, SeloSituacao, Titulo, Vazio } from '../components/ui'
 import { codigo, useStore } from '../store'
@@ -24,9 +25,11 @@ export function Inicio({ novoLancamento, ir }: { novoLancamento: () => void; ir:
         <span className="mt-1 block font-sans text-sm font-normal tracking-normal text-slate-500 normal-case">{hoje}</span>
       </Titulo>
 
+      <BuscaPecas />
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <button onClick={novoLancamento} className="group flex flex-col justify-between rounded-xl bg-blue-700 p-4 text-left text-white shadow-sm transition hover:bg-blue-800">
-          <span className="grid size-10 place-items-center rounded-full bg-white/15 text-2xl leading-none transition group-hover:bg-white/25">+</span>
+        <button onClick={novoLancamento} className="group flex flex-col justify-between rounded-xl bg-blue-700 p-4 text-left text-white shadow-sm transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-blue-900 hover:shadow-lg active:translate-y-0 active:shadow-sm">
+          <span className="grid size-10 place-items-center rounded-full bg-white/15 text-2xl leading-none transition duration-200 group-hover:scale-110 group-hover:rotate-90 group-hover:bg-white/25">+</span>
           <span className="mt-4 font-display text-xl font-semibold tracking-wide uppercase">Novo lançamento</span>
           <span className="text-sm text-blue-100">Orçamento, venda ou serviço</span>
         </button>
@@ -41,8 +44,8 @@ export function Inicio({ novoLancamento, ir }: { novoLancamento: () => void; ir:
         <Indicador rotulo="Orçamentos hoje" valor={orcHoje} onClick={() => ir('orcamentos')} />
       </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.6fr]">
-        <Painel titulo={<span className="flex items-center gap-2">Estoque baixo <Selo cor="vermelho">{baixo.length}</Selo></span>} acao={<button onClick={() => ir('estoque')} className="text-sm font-semibold text-blue-700 hover:underline">Ver estoque</button>}>
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1.6fr]">
+        <Painel titulo={<span className="flex items-center gap-2">Estoque baixo <Selo cor="vermelho">{baixo.length}</Selo></span>} acao={<button onClick={() => ir('estoque')} className="group inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 hover:text-blue-900">Ver estoque <span className="transition-transform group-hover:translate-x-0.5">→</span></button>}>
           {baixo.length ? (
             <ul className="divide-y divide-slate-100">
               {baixo.map((p) => (
@@ -82,10 +85,12 @@ export function Inicio({ novoLancamento, ir }: { novoLancamento: () => void; ir:
 
 function Indicador({ rotulo, valor, onClick }: { rotulo: string; valor: number; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-blue-300">
+    <button onClick={onClick} className="group rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-blue-300">
       <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">{rotulo}</span>
       <span className="mt-3 block font-display text-4xl font-bold text-slate-900 tabular-nums">{valor}</span>
-      <span className="text-sm text-blue-700">Ver lista →</span>
+      <span className="-mx-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm font-semibold text-blue-700 transition group-hover:bg-blue-50 group-hover:text-blue-900">
+        Ver lista <span className="transition-transform group-hover:translate-x-0.5">→</span>
+      </span>
     </button>
   )
 }
