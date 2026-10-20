@@ -40,4 +40,8 @@ input[type='date'] {
   body {
     background: white;
   }
+  /* Ao imprimir um lançamento, só o documento vai para o papel (o resto da tela ocupava a 1ª folha em branco) */
+  body:has(.documento-impresso) > :not(.documento-impresso) {
+    display: none !important;
+  }
 }

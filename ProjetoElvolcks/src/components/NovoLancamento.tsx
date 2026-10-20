@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { codigo, useStore } from '../store'
 import { FORMAS, type Forma, type Item, type Lancamento, type TipoLanc } from '../types'
-import { dinheiro, NOME_TIPO, qtd, totalLanc } from '../util'
+import { chaveDia, dinheiro, NOME_TIPO, qtd, totalLanc } from '../util'
 import { Botao, Campo, InputDinheiro, inputCls, MAX_DESCRICAO, MAX_TEXTO, Modal } from './ui'
 
 const LIMITE_PARCELAS = 12 // limite ainda a definir com o dono
@@ -52,6 +52,7 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
   const { produtos, colaboradores, lancar, avisar, produto } = useStore()
   const [cliente, setCliente] = useState(origem?.cliente ?? '')
   const [veiculo, setVeiculo] = useState(origem?.veiculo ?? '')
+  const [data, setData] = useState(() => chaveDia(new Date()))
   const [descricao, setDescricao] = useState(origem?.descricao ?? '')
   const [itens, setItens] = useState<Item[]>(origem?.itens.map((i) => ({ ...i })) ?? [])
   const [maoDeObra, setMaoDeObra] = useState(origem?.maoDeObra ?? 0)
@@ -90,7 +91,14 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
     if (tipo === 'servico' && !instaladorId) return setErro('Escolha o instalador.')
     if (desconto > pecas + mao) return setErro('O desconto é maior que o total.')
     if (tipo !== 'orcamento' && pagamentos.some((p) => p.valor <= 0)) return setErro('Confira os valores do pagamento.')
+    const hoje = chaveDia(new Date())
+    if (!data || data > hoje) return setErro('A data não pode ser depois de hoje.')
+    // Dia escolhido no formulário com a hora de agora (lançar no dia seguinte o serviço feito ontem)
+    const agora = new Date()
+    const [a, m, d] = data.split('-').map(Number)
+    const criadoEm = new Date(a, m - 1, d, agora.getHours(), agora.getMinutes(), agora.getSeconds()).toISOString()
     const novo = lancar({
+      criadoEm,
       tipo,
       cliente: cliente.trim(),
       veiculo: veiculo.trim(),
@@ -111,12 +119,15 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_10rem]">
         <Campo rotulo="Cliente *">
           <input className={inputCls} required maxLength={MAX_TEXTO} value={cliente} onChange={(e) => { setCliente(e.target.value); setErro('') }} placeholder="Nome do cliente" />
         </Campo>
         <Campo rotulo="Veículo">
           <input className={inputCls} maxLength={MAX_TEXTO} value={veiculo} onChange={(e) => setVeiculo(e.target.value)} placeholder="Ex.: Gol G5 2012 prata" />
+        </Campo>
+        <Campo rotulo="Data">
+          <input type="date" className={inputCls} max={chaveDia(new Date())} value={data} onChange={(e) => { setData(e.target.value); setErro('') }} />
         </Campo>
       </div>
 

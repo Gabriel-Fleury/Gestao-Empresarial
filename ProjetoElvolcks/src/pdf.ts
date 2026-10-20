@@ -48,22 +48,6 @@ export async function baixarPdf(origem: HTMLElement, nomeArquivo: string) {
   salvar(await gerarPdf(origem), nomeArquivo)
 }
 
-/** Celular (e alguns navegadores de computador) conseguem enviar arquivos direto para outros apps. */
-export const podeCompartilhar = () =>
-  typeof navigator.canShare === 'function' && navigator.canShare({ files: [new File([''], 'teste.pdf', { type: 'application/pdf' })] })
-
-/** Abre a tela de compartilhar do aparelho (WhatsApp, e-mail…). Se o aparelho recusar, baixa o arquivo. */
-export async function compartilharPdf(origem: HTMLElement, nomeArquivo: string, titulo: string) {
-  const blob = await gerarPdf(origem)
-  const arquivo = new File([blob], nomeArquivo, { type: 'application/pdf' })
-  try {
-    await navigator.share({ files: [arquivo], title: titulo })
-  } catch (e) {
-    if ((e as DOMException).name === 'AbortError') return // a pessoa fechou a tela de compartilhar
-    salvar(blob, nomeArquivo)
-  }
-}
-
 function salvar(blob: Blob, nomeArquivo: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

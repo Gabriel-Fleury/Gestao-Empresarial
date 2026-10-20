@@ -2,7 +2,7 @@ import { useRef, useState, type Ref } from 'react'
 import { createPortal } from 'react-dom'
 import { codigo, useStore } from '../store'
 import type { Lancamento } from '../types'
-import { baixarPdf, compartilharPdf, podeCompartilhar } from '../pdf'
+import { baixarPdf } from '../pdf'
 import { comissao, dataCurta, dataHora, dinheiro, LOJA, NOME_TIPO, orcamentoVencido, qtd, subtotalPecas, totalLanc, validadeOrcamento } from '../util'
 import { NovoLancamento } from './NovoLancamento'
 import { Botao, Cadeado, Campo, InputDinheiro, inputCls, Logo, MAX_DESCRICAO, MAX_TEXTO, Modal, SeloSituacao } from './ui'
@@ -13,8 +13,7 @@ export function Detalhe({ id, aoFechar }: { id: number; aoFechar: () => void }) 
   const [modo, setModo] = useState<'ver' | 'editar' | 'cancelar' | 'converter'>('ver')
   const [ed, setEd] = useState(() => ({ cliente: l?.cliente ?? '', veiculo: l?.veiculo ?? '', descricao: l?.descricao ?? '', desconto: l?.desconto ?? 0, nfEmitida: l?.nfEmitida ?? false, nfNumero: l?.nfNumero ?? '' }))
   const [erroEd, setErroEd] = useState('')
-  const [gerando, setGerando] = useState<'baixar' | 'compartilhar' | null>(null)
-  const [compartilhavel] = useState(podeCompartilhar)
+  const [gerando, setGerando] = useState(false)
   const impresso = useRef<HTMLDivElement>(null)
   if (!l) return null
 
@@ -38,17 +37,16 @@ export function Detalhe({ id, aoFechar }: { id: number; aoFechar: () => void }) 
     setModo('ver')
   }
 
-  const pdf = async (acao: 'baixar' | 'compartilhar') => {
+  const baixar = async () => {
     if (!impresso.current) return
     const nome = `${codigo(l)} - ${l.cliente}.pdf`.replace(/[\\/:*?"<>|]/g, '-')
-    setGerando(acao)
+    setGerando(true)
     try {
-      if (acao === 'compartilhar') await compartilharPdf(impresso.current, nome, `${NOME_TIPO[l.tipo]} ${codigo(l)}`)
-      else await baixarPdf(impresso.current, nome)
+      await baixarPdf(impresso.current, nome)
     } catch {
       avisar('Não foi possível gerar o PDF. Tente imprimir e salvar como PDF.', 'erro')
     } finally {
-      setGerando(null)
+      setGerando(false)
     }
   }
 
@@ -144,8 +142,7 @@ export function Detalhe({ id, aoFechar }: { id: number; aoFechar: () => void }) 
           ) : modo === 'ver' && (
             <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
               <Botao variante="secundario" onClick={() => window.print()}>Imprimir (A4)</Botao>
-              <Botao variante="secundario" onClick={() => pdf('baixar')} disabled={!!gerando}>{gerando === 'baixar' ? 'Gerando PDF…' : 'Baixar PDF'}</Botao>
-              {compartilhavel && <Botao variante="secundario" onClick={() => pdf('compartilhar')} disabled={!!gerando}>{gerando === 'compartilhar' ? 'Gerando PDF…' : 'Compartilhar'}</Botao>}
+              <Botao variante="secundario" onClick={baixar} disabled={gerando}>{gerando ? 'Gerando PDF…' : 'Baixar PDF'}</Botao>
               {ativo && <Botao variante="perigo" onClick={restrito(() => setModo('cancelar'))}>{!isAdmin && <Cadeado />} Cancelar</Botao>}
               {l.situacao !== 'cancelado' && <Botao variante="secundario" onClick={restrito(() => setModo('editar'))}>{!isAdmin && <Cadeado />} Editar</Botao>}
               {l.tipo === 'orcamento' && ativo && <Botao onClick={() => setModo('converter')}>Converter em venda/serviço</Botao>}
@@ -223,7 +220,7 @@ function Rodape({ rotulo, valor, fraco }: { rotulo: string; valor: string; fraco
 function DocumentoImpresso({ l, produtoNome, vendedor, instalador, ref }: { l: Lancamento; produtoNome: (id: number) => string; vendedor: string; instalador: string; ref?: Ref<HTMLDivElement> }) {
   const orc = l.tipo === 'orcamento'
   return (
-    <div ref={ref} className="hidden bg-white text-[11pt] text-black print:block">
+    <div ref={ref} className="documento-impresso hidden bg-white text-[11pt] text-black print:block">
       <header className="flex items-center gap-5 border-b-2 border-black pb-4">
         <Logo size={96} />
         <div className="flex-1">
@@ -290,6 +287,10 @@ function DocumentoImpresso({ l, produtoNome, vendedor, instalador, ref }: { l: L
       <p className="mt-10 text-sm">
         {orc ? 'Orçamento sem reserva de peças. Valores sujeitos à disponibilidade em estoque.' : 'Obrigado pela preferência! Este documento não substitui a nota fiscal.'}
       </p>
+      <div className="mt-16 grid break-inside-avoid grid-cols-2 gap-12 text-center">
+        <div className="border-t border-black pt-1">Assinatura do vendedor</div>
+        <div className="border-t border-black pt-1">Assinatura do cliente</div>
+      </div>
     </div>
   )
 }

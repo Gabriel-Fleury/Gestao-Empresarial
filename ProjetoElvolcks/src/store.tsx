@@ -4,7 +4,7 @@ import type { Alteracao, Colaborador, Funcao, Lancamento, MovEstoque, Produto, T
 
 export const AVISO_ADMIN = 'Apenas administradores podem ver/fazer isso'
 
-export type NovoLancamento = Omit<Lancamento, 'id' | 'numero' | 'situacao' | 'criadoPor' | 'criadoEm'>
+export type NovoLancamento = Omit<Lancamento, 'id' | 'numero' | 'situacao' | 'criadoPor'>
 
 export interface DadosPessoa {
   nome: string
@@ -84,10 +84,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const numero = numeros[dados.tipo] + 1
     setNumeros((n) => ({ ...n, [dados.tipo]: numero }))
     const novo: Lancamento = {
-      ...dados, id: Date.now(), numero, situacao: 'ativo', criadoPor: usuario.id, criadoEm: new Date().toISOString(),
+      ...dados, id: Date.now(), numero, situacao: 'ativo', criadoPor: usuario.id,
     }
     setLancamentos((ls) => {
-      const lista = [novo, ...ls]
+      // Lançamento com data retroativa entra na posição certa (lista é do mais novo para o mais antigo)
+      const lista = [novo, ...ls].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
       return dados.origemId
         ? lista.map((l) => (l.id === dados.origemId ? { ...l, situacao: 'convertido' as const, convertidoEmId: novo.id } : l))
         : lista
