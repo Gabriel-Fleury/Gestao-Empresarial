@@ -1,6 +1,6 @@
 // Dados fictícios para o protótipo. Gerados com semente fixa, relativos à data de hoje,
 // para que os números fiquem iguais a cada recarga e sempre "atuais".
-import type { Alteracao, Colaborador, Forma, Item, Lancamento, MovEstoque, Pagamento, Produto } from './types'
+import type { Alteracao, Cliente, Colaborador, Forma, Item, Lancamento, MovEstoque, Pagamento, Produto } from './types'
 
 function mulberry32(seed: number) {
   return () => {
@@ -63,6 +63,12 @@ const CLIENTES = [
   'Felipe Barros', 'Larissa Ribeiro', 'André Moreira', 'Bruna Carvalho', 'Vinícius Pereira', 'Camila Duarte',
   'Wesley Santos', 'Renata Freitas', 'Leandro Dias', 'Jéssica Moura', 'Mateus Cardoso', 'Simone Teixeira',
 ]
+export const clientesIniciais: Cliente[] = CLIENTES.map((nome, k) => ({
+  id: k + 1,
+  nome,
+  telefone: `(66) 9${String(8100 + ((k * 7919) % 1900)).padStart(4, '0')}-${String((k * 4231 + 1307) % 10000).padStart(4, '0')}`,
+}))
+
 const VEICULOS = [
   'Gol G5 2012 prata', 'Onix 2019 branco', 'Hilux 2021 preta', 'Strada 2018 vermelha', 'HB20 2020 cinza',
   'S10 2016 branca', 'Saveiro 2015 prata', 'Corolla 2017 preto', 'Ranger 2022 azul', 'Uno 2010 branco',
@@ -183,6 +189,7 @@ function gerar() {
   }
 
   lancs.sort((a, b) => a.criadoEm.localeCompare(b.criadoEm))
+  for (const l of lancs) l.telefone = clientesIniciais.find((c) => c.nome === l.cliente)?.telefone
   let nf = 4810
   for (const l of lancs) {
     if (l.nfEmitida) l.nfNumero = String(++nf)

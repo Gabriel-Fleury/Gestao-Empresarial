@@ -2,6 +2,7 @@
 
 @theme {
   --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-marca: 'Shantell Sans', cursive;
   --font-sans: 'Source Sans 3', system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 

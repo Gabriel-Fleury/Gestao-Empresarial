@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
-import { colaboradores as colaboradoresIniciais, dadosIniciais, produtosIniciais } from './mock'
-import type { Alteracao, Colaborador, Funcao, Lancamento, MovEstoque, Produto, TipoMov } from './types'
+import { clientesIniciais, colaboradores as colaboradoresIniciais, dadosIniciais, produtosIniciais } from './mock'
+import type { Alteracao, Cliente, Colaborador, Funcao, Lancamento, MovEstoque, Produto, TipoMov } from './types'
+import { formatarTelefone, telefoneValido } from './util'
 
 export const AVISO_ADMIN = 'Apenas administradores podem ver/fazer isso'
 
@@ -24,6 +25,8 @@ interface Store {
   alternarAtivo: (id: number) => void
   isAdmin: boolean
   colaboradores: Colaborador[]
+  clientes: Cliente[]
+  salvarCliente: (id: number | null, dados: Omit<Cliente, 'id'>) => string | null
   produtos: Produto[]
   lancamentos: Lancamento[]
   movimentacoes: MovEstoque[]
@@ -45,6 +48,7 @@ const Ctx = createContext<Store | null>(null)
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [usuarioId, setUsuarioId] = useState<number | null>(null)
   const [colaboradores, setColaboradores] = useState(colaboradoresIniciais)
+  const [clientes, setClientes] = useState(clientesIniciais)
   const [produtos, setProdutos] = useState(produtosIniciais)
   const [lancamentos, setLancamentos] = useState(dadosIniciais.lancs)
   const [movimentacoes, setMovs] = useState(dadosIniciais.movs)
@@ -165,6 +169,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return null
   }
 
+  const salvarCliente = (id: number | null, d: Omit<Cliente, 'id'>) => {
+    const nome = d.nome.trim()
+    const telefone = formatarTelefone(d.telefone)
+    if (nome.length < 2) return 'Informe o nome do cliente.'
+    if (!telefoneValido(telefone)) return 'Informe o telefone com DDD, ex.: (66) 99956-0726.'
+    const mesmo = clientes.find((c) => c.id !== id && c.telefone === telefone)
+    if (mesmo) return `Esse telefone já está cadastrado para ${mesmo.nome}.`
+    if (id === null) {
+      setClientes((cs) => [...cs, { id: Math.max(0, ...cs.map((c) => c.id)) + 1, nome, telefone }])
+      avisar(`${nome} cadastrado`)
+    } else {
+      setClientes((cs) => cs.map((c) => (c.id === id ? { ...c, nome, telefone } : c)))
+      avisar('Dados do cliente salvos')
+    }
+    return null
+  }
+
   const alternarAtivo = (id: number) => {
     if (!isAdmin) return avisar(AVISO_ADMIN, 'erro')
     if (id === usuarioId) return avisar('Você não pode desativar a sua própria conta.', 'erro')
@@ -175,7 +196,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   const value: Store = {
-    logado, usuario, isAdmin, entrar, sair: () => setUsuarioId(null), salvarPessoa, alternarAtivo, colaboradores, produtos, lancamentos, movimentacoes, alteracoes, toast, avisar,
+    logado, usuario, isAdmin, entrar, sair: () => setUsuarioId(null), salvarPessoa, alternarAtivo, colaboradores, clientes, salvarCliente, produtos, lancamentos, movimentacoes, alteracoes, toast, avisar,
     avisoAdmin: () => avisar(AVISO_ADMIN, 'erro'),
     lancar, cancelar, editar, movimentarEstoque, novoProduto,
     produto: (id) => produtos.find((p) => p.id === id),

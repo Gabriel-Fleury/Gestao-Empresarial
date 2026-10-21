@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { NovoLancamento } from './components/NovoLancamento'
 import { Cadeado, Logo } from './components/ui'
 import { Caixa } from './pages/Caixa'
+import { Clientes } from './pages/Clientes'
 import { Colaboradores } from './pages/Colaboradores'
 import { Estoque } from './pages/Estoque'
 import { Inicio } from './pages/Inicio'
@@ -11,13 +12,14 @@ import { Relatorios } from './pages/Relatorios'
 import { StoreProvider, useStore } from './store'
 import type { TipoLanc } from './types'
 
-export type Pagina = 'inicio' | 'vendas' | 'orcamentos' | 'servicos' | 'colaboradores' | 'estoque' | 'caixa' | 'relatorios'
+export type Pagina = 'inicio' | 'vendas' | 'orcamentos' | 'servicos' | 'clientes' | 'colaboradores' | 'estoque' | 'caixa' | 'relatorios'
 
 const ICONES: Record<Pagina, ReactNode> = {
   inicio: <path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z" />,
   vendas: <path d="M6 7h12l-1 13H7L6 7zm3 0a3 3 0 016 0" />,
   orcamentos: <path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6" />,
   servicos: <path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z" />,
+  clientes: <path d="M20 21v-1a5 5 0 00-5-5H9a5 5 0 00-5 5v1M12 11a4 4 0 100-8 4 4 0 000 8z" />,
   colaboradores: <path d="M16 19v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 10a3 3 0 100-6 3 3 0 000 6zM21 19v-1a4 4 0 00-3-3.9M16 4.1a3 3 0 010 5.8" />,
   estoque: <path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8" />,
   caixa: <path d="M3 7h18v12H3zM3 11h18M7 15h3" />,
@@ -29,6 +31,7 @@ const MENU: { id: Pagina; nome: string; admin?: boolean }[] = [
   { id: 'vendas', nome: 'Vendas' },
   { id: 'orcamentos', nome: 'Orçamentos' },
   { id: 'servicos', nome: 'Serviços realizados' },
+  { id: 'clientes', nome: 'Clientes' },
   { id: 'colaboradores', nome: 'Colaboradores' },
   { id: 'estoque', nome: 'Estoque' },
   { id: 'caixa', nome: 'Caixa', admin: true },
@@ -58,8 +61,8 @@ function Shell() {
           <div className="flex items-center gap-3 px-5 py-5">
             <Logo size={52} />
             <div>
-              <div className="font-display text-xl leading-none font-bold tracking-wide text-white">ELVOLCKS</div>
-              <div className="text-xs tracking-[0.2em] text-slate-400">AUTO SOM</div>
+              <div className="font-marca text-xl leading-none font-bold tracking-wide text-white">ELVOLCKS</div>
+              <div className="font-marca text-xs tracking-[0.2em] text-slate-400">AUTO SOM</div>
             </div>
           </div>
           <nav className="flex-1 space-y-0.5 overflow-y-auto px-3">
@@ -99,7 +102,7 @@ function Shell() {
           <button onClick={() => setMenuAberto(true)} className="rounded-lg p-2 hover:bg-slate-100" aria-label="Abrir menu">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
-          <span className="font-display text-xl font-bold tracking-wide">ELVOLCKS</span>
+          <span className="font-marca text-xl font-bold tracking-wide">ELVOLCKS</span>
           <span className="ml-auto text-sm text-slate-500">{usuario.nome.split(' ')[0]}</span>
         </header>
 
@@ -113,6 +116,7 @@ function Shell() {
           {pagina === 'vendas' && <Lancamentos key="v" tipo="venda" novoLancamento={(tipo) => setNovo({ tipo })} />}
           {pagina === 'orcamentos' && <Lancamentos key="o" tipo="orcamento" novoLancamento={(tipo) => setNovo({ tipo })} />}
           {pagina === 'servicos' && <Lancamentos key="s" tipo="servico" novoLancamento={(tipo) => setNovo({ tipo })} />}
+          {pagina === 'clientes' && <Clientes />}
           {pagina === 'colaboradores' && <Colaboradores key={visita} />}
           {pagina === 'estoque' && <Estoque />}
           {pagina === 'caixa' && isAdmin && <Caixa />}

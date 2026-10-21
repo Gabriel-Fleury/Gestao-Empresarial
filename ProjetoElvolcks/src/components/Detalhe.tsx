@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { codigo, useStore } from '../store'
 import type { Lancamento } from '../types'
 import { baixarPdf } from '../pdf'
-import { comissao, dataCurta, dataHora, dinheiro, LOJA, NOME_TIPO, orcamentoVencido, qtd, subtotalPecas, totalLanc, validadeOrcamento } from '../util'
+import { comissao, dataCurta, dataHora, dinheiro, formatarTelefone, LOJA, NOME_TIPO, orcamentoVencido, qtd, subtotalPecas, telefoneValido, totalLanc, validadeOrcamento } from '../util'
 import { NovoLancamento } from './NovoLancamento'
 import { Botao, Cadeado, Campo, InputDinheiro, inputCls, Logo, MAX_DESCRICAO, MAX_TEXTO, Modal, SeloSituacao } from './ui'
 
@@ -11,7 +11,7 @@ export function Detalhe({ id, aoFechar }: { id: number; aoFechar: () => void }) 
   const { lancamentos, alteracoes, colaborador, produto, isAdmin, avisoAdmin, cancelar, editar, avisar } = useStore()
   const l = lancamentos.find((x) => x.id === id)
   const [modo, setModo] = useState<'ver' | 'editar' | 'cancelar' | 'converter'>('ver')
-  const [ed, setEd] = useState(() => ({ cliente: l?.cliente ?? '', veiculo: l?.veiculo ?? '', descricao: l?.descricao ?? '', desconto: l?.desconto ?? 0, nfEmitida: l?.nfEmitida ?? false, nfNumero: l?.nfNumero ?? '' }))
+  const [ed, setEd] = useState(() => ({ cliente: l?.cliente ?? '', telefone: l?.telefone ?? '', veiculo: l?.veiculo ?? '', descricao: l?.descricao ?? '', desconto: l?.desconto ?? 0, nfEmitida: l?.nfEmitida ?? false, nfNumero: l?.nfNumero ?? '' }))
   const [erroEd, setErroEd] = useState('')
   const [gerando, setGerando] = useState(false)
   const impresso = useRef<HTMLDivElement>(null)
@@ -28,12 +28,14 @@ export function Detalhe({ id, aoFechar }: { id: number; aoFechar: () => void }) 
     if (!ed.cliente.trim()) return setErroEd('Informe o nome do cliente.')
     const mudou: string[] = []
     if (ed.cliente !== l.cliente) mudou.push(`Cliente: "${l.cliente}" → "${ed.cliente}"`)
+    if (ed.telefone && !telefoneValido(ed.telefone)) return setErroEd('Confira o telefone (com DDD) ou deixe em branco.')
+    if (ed.telefone !== (l.telefone ?? '')) mudou.push(`Telefone: "${l.telefone || '—'}" → "${ed.telefone || '—'}"`)
     if (ed.veiculo !== l.veiculo) mudou.push(`Veículo: "${l.veiculo || '—'}" → "${ed.veiculo || '—'}"`)
     if (ed.descricao.trim() !== (l.descricao ?? '')) mudou.push(`Descrição do serviço: "${l.descricao || '—'}" → "${ed.descricao.trim() || '—'}"`)
     if (ed.desconto !== l.desconto) mudou.push(`Desconto: ${dinheiro(l.desconto)} → ${dinheiro(ed.desconto)}`)
     if (ed.nfEmitida !== l.nfEmitida || (ed.nfNumero || '') !== (l.nfNumero || '')) mudou.push(`NF: ${l.nfEmitida ? `nº ${l.nfNumero}` : 'não emitida'} → ${ed.nfEmitida ? `nº ${ed.nfNumero}` : 'não emitida'}`)
     if (!mudou.length) return setModo('ver')
-    editar(l.id, { ...ed, descricao: ed.descricao.trim() || undefined, nfNumero: ed.nfEmitida ? ed.nfNumero : undefined }, mudou.join('; '))
+    editar(l.id, { ...ed, telefone: ed.telefone || undefined, descricao: ed.descricao.trim() || undefined, nfNumero: ed.nfEmitida ? ed.nfNumero : undefined }, mudou.join('; '))
     setModo('ver')
   }
 
@@ -59,6 +61,7 @@ export function Detalhe({ id, aoFechar }: { id: number; aoFechar: () => void }) 
           {modo === 'editar' ? (
             <div className="grid gap-3 rounded-xl border border-blue-200 bg-blue-50/40 p-3 sm:grid-cols-2">
               <Campo rotulo="Cliente"><input className={inputCls} maxLength={MAX_TEXTO} value={ed.cliente} onChange={(e) => { setEd({ ...ed, cliente: e.target.value }); setErroEd('') }} /></Campo>
+              <Campo rotulo="Telefone"><input type="tel" inputMode="numeric" className={inputCls} value={ed.telefone} onChange={(e) => setEd({ ...ed, telefone: formatarTelefone(e.target.value) })} placeholder="(66) 99999-9999" /></Campo>
               <Campo rotulo="Veículo"><input className={inputCls} maxLength={MAX_TEXTO} value={ed.veiculo} onChange={(e) => setEd({ ...ed, veiculo: e.target.value })} /></Campo>
               {l.tipo !== 'venda' && (
                 <Campo rotulo="Descrição do serviço" className="sm:col-span-2">
@@ -83,6 +86,7 @@ export function Detalhe({ id, aoFechar }: { id: number; aoFechar: () => void }) 
           ) : (
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
               <Info rotulo="Cliente" valor={l.cliente} />
+              <Info rotulo="Telefone" valor={l.telefone || '—'} />
               <Info rotulo="Veículo" valor={l.veiculo || '—'} />
               <Info rotulo="Lançado em" valor={dataHora(l.criadoEm)} />
               <Info rotulo="Lançado por" valor={colaborador(l.criadoPor)?.nome ?? '—'} />
@@ -224,7 +228,7 @@ function DocumentoImpresso({ l, produtoNome, vendedor, instalador, ref }: { l: L
       <header className="flex items-center gap-5 border-b-2 border-black pb-4">
         <Logo size={96} />
         <div className="flex-1">
-          <div className="font-display text-3xl font-bold uppercase">{LOJA.nome}</div>
+          <div className="font-marca text-3xl font-bold uppercase">{LOJA.nome}</div>
           <div>{LOJA.endereco}</div>
           <div>WhatsApp {LOJA.whatsapp} · {LOJA.cnpj}</div>
         </div>
@@ -237,6 +241,7 @@ function DocumentoImpresso({ l, produtoNome, vendedor, instalador, ref }: { l: L
       <div className="my-4 grid grid-cols-2 gap-1">
         <div><b>Cliente:</b> {l.cliente}</div>
         <div><b>Data:</b> {dataCurta(l.criadoEm)}</div>
+        {l.telefone && <div><b>Telefone:</b> {l.telefone}</div>}
         <div><b>Veículo:</b> {l.veiculo || '—'}</div>
         {orc && <div><b>Válido até:</b> {dataCurta(validadeOrcamento(l))} (7 dias)</div>}
         <div><b>Atendente:</b> {vendedor}</div>

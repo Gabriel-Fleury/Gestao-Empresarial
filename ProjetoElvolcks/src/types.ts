@@ -12,6 +12,12 @@ export interface Colaborador {
   senha?: string
 }
 
+export interface Cliente {
+  id: number
+  nome: string
+  telefone: string
+}
+
 export interface Produto {
   id: number
   nome: string
@@ -56,6 +62,7 @@ export interface Lancamento {
   tipo: TipoLanc
   numero: number
   cliente: string
+  telefone?: string
   veiculo: string
   /** Serviço realizado: o que foi feito (ex.: montagem de peça trazida pelo cliente) */
   descricao?: string

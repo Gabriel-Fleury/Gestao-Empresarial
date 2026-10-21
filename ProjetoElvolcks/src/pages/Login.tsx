@@ -20,8 +20,8 @@ export function Login() {
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
           <Logo size={88} />
-          <div className="mt-3 font-display text-3xl leading-none font-bold tracking-wide text-white">ELVOLCKS</div>
-          <div className="text-xs tracking-[0.3em] text-slate-400">AUTO SOM</div>
+          <div className="mt-3 font-marca text-3xl leading-none font-bold tracking-wide text-white">ELVOLCKS</div>
+          <div className="font-marca text-xs tracking-[0.3em] text-slate-400">AUTO SOM</div>
         </div>
 
         <form onSubmit={enviar} className="space-y-4 rounded-2xl bg-white p-6 shadow-2xl">

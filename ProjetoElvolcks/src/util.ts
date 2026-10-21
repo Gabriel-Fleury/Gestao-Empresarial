@@ -16,6 +16,18 @@ export const dataCurta = (d: Date | string) =>
 
 export const hora = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
+/** Formata enquanto digita: (66) 99956-0726 ou (66) 3401-1234 */
+export const formatarTelefone = (s: string) => {
+  const d = s.replace(/\D/g, '').slice(0, 11)
+  if (d.length <= 2) return d.length ? `(${d}` : ''
+  const meio = d.length === 11 ? 7 : 6
+  return `(${d.slice(0, 2)}) ${d.slice(2, meio)}${d.length > meio ? `-${d.slice(meio)}` : ''}`
+}
+export const telefoneValido = (s: string) => /^\d{10,11}$/.test(s.replace(/\D/g, ''))
+
+/** Para buscar sem diferenciar maiúscula nem acento */
+export const normalizar = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+
 export const chaveDia = (d: Date | string) => {
   const x = new Date(d)
   return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`

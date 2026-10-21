@@ -26,7 +26,7 @@ export function Lancamentos({ tipo, novoLancamento }: { tipo: TipoLanc; novoLanc
       if (situacao === 'aberto' && !(l.situacao === 'ativo' && !orcamentoVencido(l))) return false
       if (situacao !== 'todas' && situacao !== 'aberto' && situacao !== 'vencido' && l.situacao !== situacao) return false
       if (situacao === 'vencido' && !orcamentoVencido(l)) return false
-      if (b && !`${l.cliente} ${l.veiculo} ${codigo(l)} ${l.descricao ?? ''}`.toLowerCase().includes(b)) return false
+      if (b && !`${l.cliente} ${l.telefone ?? ''} ${l.veiculo} ${codigo(l)} ${l.descricao ?? ''}`.toLowerCase().includes(b)) return false
       return true
     })
   }, [lancamentos, tipo, busca, periodo, situacao])
@@ -38,7 +38,7 @@ export function Lancamentos({ tipo, novoLancamento }: { tipo: TipoLanc; novoLanc
       <Titulo acao={<Botao onClick={() => novoLancamento(tipo)}>+ {tipo === 'orcamento' ? 'Novo orçamento' : tipo === 'venda' ? 'Nova venda' : 'Novo serviço'}</Botao>}>{TITULOS[tipo]}</Titulo>
 
       <div className="mb-3 flex flex-wrap gap-2">
-        <input className={`${inputCls} max-w-xs`} placeholder="Buscar cliente, veículo ou número…" value={busca} onChange={(e) => setBusca(e.target.value)} />
+        <input className={`${inputCls} max-w-xs`} placeholder="Buscar cliente, telefone, veículo ou número…" value={busca} onChange={(e) => setBusca(e.target.value)} />
         <select className={`${inputCls} w-auto!`} value={periodo} onChange={(e) => setPeriodo(e.target.value as Periodo)}>
           <option value="hoje">Hoje</option>
           <option value="7">Últimos 7 dias</option>

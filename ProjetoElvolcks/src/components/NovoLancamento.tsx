@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { codigo, useStore } from '../store'
 import { FORMAS, type Forma, type Item, type Lancamento, type TipoLanc } from '../types'
-import { chaveDia, dinheiro, NOME_TIPO, qtd, totalLanc } from '../util'
+import { chaveDia, dinheiro, formatarTelefone, NOME_TIPO, normalizar, qtd, telefoneValido, totalLanc } from '../util'
 import { Botao, Campo, InputDinheiro, inputCls, MAX_DESCRICAO, MAX_TEXTO, Modal } from './ui'
 
 const LIMITE_PARCELAS = 12 // limite ainda a definir com o dono
@@ -49,8 +49,10 @@ export function NovoLancamento({ aoFechar, tipoInicial = 'venda', origem }: { ao
 }
 
 function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lancamento; aoFechar: () => void }) {
-  const { produtos, colaboradores, lancar, avisar, produto } = useStore()
+  const { produtos, colaboradores, clientes, lancar, avisar, produto } = useStore()
   const [cliente, setCliente] = useState(origem?.cliente ?? '')
+  const [telefone, setTelefone] = useState(origem?.telefone ?? '')
+  const [focoCliente, setFocoCliente] = useState(false)
   const [veiculo, setVeiculo] = useState(origem?.veiculo ?? '')
   const [data, setData] = useState(() => chaveDia(new Date()))
   const [descricao, setDescricao] = useState(origem?.descricao ?? '')
@@ -72,6 +74,18 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
   // Com uma forma, ela recebe o total; com duas, a segunda recebe o que faltar
   const pagamentos = pags.length === 1 ? [{ ...pags[0], valor: total }] : [pags[0], { ...pags[1], valor: +(total - pags[0].valor).toFixed(2) }]
 
+  // Clientes cadastrados com o nome (ou telefone) que está sendo digitado — escolher é opcional
+  const clientesSugeridos = useMemo(() => {
+    const b = normalizar(cliente)
+    if (!focoCliente || !b) return []
+    const digitos = cliente.replace(/\D/g, '')
+    return clientes
+      .filter((c) => !(c.nome === cliente && c.telefone === telefone))
+      .filter((c) => normalizar(c.nome).includes(b) || (digitos.length >= 3 && c.telefone.replace(/\D/g, '').includes(digitos)))
+      .sort((x, y) => Number(normalizar(y.nome).startsWith(b)) - Number(normalizar(x.nome).startsWith(b)) || x.nome.localeCompare(y.nome))
+      .slice(0, 6)
+  }, [cliente, telefone, clientes, focoCliente])
+
   const sugestoes = useMemo(() => {
     const b = busca.trim().toLowerCase()
     if (!b) return []
@@ -91,6 +105,7 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
     if (tipo === 'servico' && !instaladorId) return setErro('Escolha o instalador.')
     if (desconto > pecas + mao) return setErro('O desconto é maior que o total.')
     if (tipo !== 'orcamento' && pagamentos.some((p) => p.valor <= 0)) return setErro('Confira os valores do pagamento.')
+    if (telefone && !telefoneValido(telefone)) return setErro('Confira o telefone (com DDD) ou deixe em branco.')
     const hoje = chaveDia(new Date())
     if (!data || data > hoje) return setErro('A data não pode ser depois de hoje.')
     // Dia escolhido no formulário com a hora de agora (lançar no dia seguinte o serviço feito ontem)
@@ -101,6 +116,7 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
       criadoEm,
       tipo,
       cliente: cliente.trim(),
+      telefone: telefone || undefined,
       veiculo: veiculo.trim(),
       descricao: tipo !== 'venda' ? descricao.trim() || undefined : undefined,
       itens: itens.filter((i) => i.quantidade > 0),
@@ -119,9 +135,42 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_10rem]">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Campo rotulo="Cliente *">
-          <input className={inputCls} required maxLength={MAX_TEXTO} value={cliente} onChange={(e) => { setCliente(e.target.value); setErro('') }} placeholder="Nome do cliente" />
+          <div className="relative">
+            <input
+              className={inputCls}
+              required
+              maxLength={MAX_TEXTO}
+              autoComplete="off"
+              value={cliente}
+              onChange={(e) => { setCliente(e.target.value); setErro('') }}
+              onFocus={() => setFocoCliente(true)}
+              onBlur={() => setFocoCliente(false)}
+              placeholder="Nome do cliente"
+            />
+            {clientesSugeridos.length > 0 && (
+              <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                {clientesSugeridos.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      // mousedown evita que o campo perca o foco antes do clique
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => { setCliente(c.nome); setTelefone(c.telefone); setFocoCliente(false); setErro('') }}
+                      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-blue-50"
+                    >
+                      <span>{c.nome}</span>
+                      <span className="shrink-0 text-xs text-slate-500 tabular-nums">{c.telefone}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Campo>
+        <Campo rotulo="Telefone">
+          <input type="tel" inputMode="numeric" className={inputCls} value={telefone} onChange={(e) => { setTelefone(formatarTelefone(e.target.value)); setErro('') }} placeholder="(66) 99999-9999" />
         </Campo>
         <Campo rotulo="Veículo">
           <input className={inputCls} maxLength={MAX_TEXTO} value={veiculo} onChange={(e) => setVeiculo(e.target.value)} placeholder="Ex.: Gol G5 2012 prata" />
