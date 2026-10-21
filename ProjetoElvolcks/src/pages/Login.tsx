@@ -3,16 +3,24 @@ import { Botao, Campo, inputCls, Logo } from '../components/ui'
 import { useStore } from '../store'
 
 export function Login() {
-  const { entrar } = useStore()
+  const { entrar, avisoLogin } = useStore()
   const [usuario, setUsuario] = useState('')
   const [senha, setSenha] = useState('')
   const [verSenha, setVerSenha] = useState(false)
   const [erro, setErro] = useState('')
+  const [entrando, setEntrando] = useState(false)
 
-  const enviar = (e: FormEvent) => {
+  const enviar = async (e: FormEvent) => {
     e.preventDefault()
+    if (entrando) return
     if (!usuario.trim() || !senha) return setErro('Preencha usuário e senha.')
-    setErro(entrar(usuario, senha) ?? '')
+    setEntrando(true)
+    const falha = await entrar(usuario, senha)
+    // Deu certo: a tela troca sozinha quando os dados da conta chegam
+    if (falha) {
+      setErro(falha)
+      setEntrando(false)
+    }
   }
 
   return (
@@ -36,7 +44,7 @@ export function Login() {
               autoCorrect="off"
               spellCheck={false}
               autoFocus
-              placeholder="Ex.: elvis"
+              placeholder="Ex.: gabriel"
             />
           </Campo>
           <Campo rotulo="Senha">
@@ -53,14 +61,11 @@ export function Login() {
               </button>
             </div>
           </Campo>
-          {erro && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>}
-          <Botao type="submit" className="w-full py-2.5">Entrar</Botao>
+          {(erro || avisoLogin) && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{erro || avisoLogin}</p>}
+          <Botao type="submit" className="w-full py-2.5" disabled={entrando}>{entrando ? 'Entrando…' : 'Entrar'}</Botao>
           <p className="text-center text-xs text-slate-500">Esqueceu a senha? Peça para um administrador trocar na tela Colaboradores.</p>
         </form>
 
-        <p className="mt-4 rounded-xl border border-white/10 px-4 py-3 text-center text-xs text-slate-400">
-          Protótipo · contas de teste: <b className="text-slate-200">elvis</b> ou <b className="text-slate-200">carla</b> (administradores), <b className="text-slate-200">rafael</b> ou <b className="text-slate-200">marcos</b> (funcionários) · senha <b className="text-slate-200">1234</b>
-        </p>
       </div>
     </div>
   )

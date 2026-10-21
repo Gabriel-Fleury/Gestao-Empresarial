@@ -1,0 +1,84 @@
+rules_version = '2';
+
+// Quem pode ler e gravar o quê no banco da Elvolcks.
+// acessos/{uid} liga a conta de login (Firebase Authentication) à pessoa em colaboradores/{id}.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function caminho(colecao, id) {
+      return /databases/$(database)/documents/$(colecao)/$(id);
+    }
+    function meuId() {
+      return get(caminho('acessos', request.auth.uid)).data.colaboradorId;
+    }
+    function eu() {
+      return get(caminho('colaboradores', meuId())).data;
+    }
+    // Logado e com a conta ativa
+    function logado() {
+      return request.auth != null && exists(caminho('acessos', request.auth.uid)) && eu().ativo == true;
+    }
+    function admin() {
+      return logado() && 'admin' in eu().funcoes;
+    }
+    // Instalação inicial: vale uma única vez, no mesmo envio que cria config/instalacao
+    function instalando() {
+      return request.auth != null
+        && !exists(caminho('config', 'instalacao'))
+        && existsAfter(caminho('config', 'instalacao'));
+    }
+
+    match /config/{id} {
+      allow read: if logado();
+      allow create: if id == 'instalacao' && instalando();
+    }
+
+    match /acessos/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || admin());
+      allow create: if admin() || instalando();
+      allow update, delete: if admin();
+    }
+
+    match /colaboradores/{id} {
+      allow read: if logado();
+      allow create: if admin() || instalando();
+      allow update: if admin();
+    }
+
+    match /clientes/{id} {
+      allow read, create, update: if logado();
+      allow delete: if admin();
+    }
+
+    match /produtos/{id} {
+      allow read, create, update: if logado();
+      allow delete: if admin();
+    }
+
+    match /lancamentos/{id} {
+      allow read: if logado();
+      allow create: if logado() && request.resource.data.criadoPor == meuId();
+      // Editar/cancelar: só administrador. Qualquer um pode marcar um orçamento como convertido.
+      allow update: if admin() || (
+        logado()
+        && resource.data.tipo == 'orcamento'
+        && request.resource.data.situacao == 'convertido'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['situacao', 'convertidoEmId'])
+      );
+    }
+
+    match /movimentacoes/{id} {
+      allow read: if logado();
+      allow create: if logado() && request.resource.data.colaboradorId == meuId();
+    }
+
+    match /alteracoes/{id} {
+      allow read: if logado();
+      allow create: if admin() && request.resource.data.colaboradorId == meuId();
+    }
+
+    match /contadores/{id} {
+      allow read, create, update: if logado();
+    }
+  }
+}

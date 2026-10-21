@@ -120,7 +120,7 @@ function MexerEstoque({ p, tipo, aoFechar }: { p: Produto; tipo: 'entrada' | 'aj
 }
 
 function NovoProduto({ aoFechar }: { aoFechar: () => void }) {
-  const { novoProduto, avisar } = useStore()
+  const { novoProduto } = useStore()
   const [nome, setNome] = useState('')
   const [preco, setPreco] = useState(0)
   const [quantidade, setQuantidade] = useState(0)
@@ -135,7 +135,7 @@ function NovoProduto({ aoFechar }: { aoFechar: () => void }) {
       </div>
       <div className="mt-4 flex justify-end gap-2">
         <Botao variante="secundario" onClick={aoFechar}>Cancelar</Botao>
-        <Botao disabled={!nome.trim() || preco <= 0} onClick={() => { novoProduto(nome.trim(), preco, quantidade); avisar(`${nome} cadastrado`); aoFechar() }}>Cadastrar</Botao>
+        <Botao disabled={!nome.trim() || preco <= 0} onClick={() => { novoProduto(nome.trim(), preco, quantidade); aoFechar() }}>Cadastrar</Botao>
       </div>
     </Modal>
   )

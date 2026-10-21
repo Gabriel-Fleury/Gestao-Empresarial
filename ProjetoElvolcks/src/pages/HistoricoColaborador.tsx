@@ -13,12 +13,12 @@ const ABAS: { tipo: TipoLanc; nome: string }[] = [
 ]
 const NOME_FUNCAO = { vende: 'Vende', instala: 'Instala', admin: 'Administrador' }
 
-export function HistoricoColaborador({ id, periodoInicial = 'tudo', aoVoltar }: { id: number; periodoInicial?: string; aoVoltar: () => void }) {
+export function HistoricoColaborador({ id, periodoInicial = 'tudo', aoVoltar }: { id: string; periodoInicial?: string; aoVoltar: () => void }) {
   const { colaboradores, lancamentos } = useStore()
   const c = colaboradores.find((x) => x.id === id)
   const [periodo, setPeriodo] = useState(periodoInicial)
   const [aba, setAba] = useState<TipoLanc>(c?.funcoes.includes('instala') ? 'servico' : 'venda')
-  const [aberto, setAberto] = useState<number | null>(null)
+  const [aberto, setAberto] = useState<string | null>(null)
   if (!c) return null
 
   // Serviços: os que ele instalou ou lançou. Vendas e orçamentos: os que ele lançou.

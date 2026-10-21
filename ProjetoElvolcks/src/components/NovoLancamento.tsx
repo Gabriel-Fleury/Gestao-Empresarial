@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { mensagemErro } from '../firebase'
 import { codigo, useStore } from '../store'
 import { FORMAS, type Forma, type Item, type Lancamento, type TipoLanc } from '../types'
 import { chaveDia, dinheiro, formatarTelefone, NOME_TIPO, normalizar, qtd, telefoneValido, totalLanc } from '../util'
@@ -59,7 +60,7 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
   const [itens, setItens] = useState<Item[]>(origem?.itens.map((i) => ({ ...i })) ?? [])
   const [maoDeObra, setMaoDeObra] = useState(origem?.maoDeObra ?? 0)
   const instaladores = colaboradores.filter((c) => c.ativo && c.funcoes.includes('instala'))
-  const [instaladorId, setInstaladorId] = useState<number | ''>('')
+  const [instaladorId, setInstaladorId] = useState<string>('')
   const [comissaoPct, setComissaoPct] = useState(50)
   const [desconto, setDesconto] = useState(origem?.desconto ?? 0)
   const [pags, setPags] = useState<Pag[]>([{ forma: 'PIX', valor: 0, parcelas: 2 }])
@@ -67,6 +68,7 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
   const [nfNumero, setNfNumero] = useState('')
   const [busca, setBusca] = useState('')
   const [erro, setErro] = useState('')
+  const [salvando, setSalvando] = useState(false)
 
   const mao = tipo === 'venda' ? 0 : maoDeObra
   const total = totalLanc({ itens, maoDeObra: mao, desconto })
@@ -92,14 +94,15 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
     return produtos.filter((p) => p.nome.toLowerCase().includes(b)).slice(0, 6)
   }, [busca, produtos])
 
-  const addItem = (id: number) => {
+  const addItem = (id: string) => {
     const p = produto(id)!
     setItens((is) => (is.some((i) => i.produtoId === id) ? is.map((i) => (i.produtoId === id ? { ...i, quantidade: i.quantidade + 1 } : i)) : [...is, { produtoId: id, quantidade: 1, preco: p.preco }]))
     setBusca('')
   }
-  const mudarItem = (id: number, campo: 'quantidade' | 'preco', v: number) => setItens((is) => is.map((i) => (i.produtoId === id ? { ...i, [campo]: v } : i)))
+  const mudarItem = (id: string, campo: 'quantidade' | 'preco', v: number) => setItens((is) => is.map((i) => (i.produtoId === id ? { ...i, [campo]: v } : i)))
 
-  const salvar = () => {
+  const salvar = async () => {
+    if (salvando) return
     if (!cliente.trim()) return setErro('Informe o nome do cliente.')
     if (!itens.length && !mao) return setErro('Adicione pelo menos uma peça ou a mão de obra.')
     if (tipo === 'servico' && !instaladorId) return setErro('Escolha o instalador.')
@@ -112,7 +115,10 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
     const agora = new Date()
     const [a, m, d] = data.split('-').map(Number)
     const criadoEm = new Date(a, m - 1, d, agora.getHours(), agora.getMinutes(), agora.getSeconds()).toISOString()
-    const novo = lancar({
+    setSalvando(true)
+    let novo
+    try {
+      novo = await lancar({
       criadoEm,
       tipo,
       cliente: cliente.trim(),
@@ -121,14 +127,18 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
       descricao: tipo !== 'venda' ? descricao.trim() || undefined : undefined,
       itens: itens.filter((i) => i.quantidade > 0),
       maoDeObra: mao,
-      instaladorId: tipo === 'servico' ? Number(instaladorId) : undefined,
+      instaladorId: tipo === 'servico' ? instaladorId : undefined,
       comissaoPct: tipo === 'servico' ? comissaoPct : 0,
       desconto,
       pagamentos: tipo === 'orcamento' ? [] : pagamentos.map((p) => ({ forma: p.forma, valor: p.valor, parcelas: p.forma === 'Crédito parcelado' ? p.parcelas : undefined })),
       nfEmitida: tipo !== 'orcamento' && nfEmitida,
       nfNumero: nfEmitida ? nfNumero : undefined,
       origemId: origem?.id,
-    })
+      })
+    } catch (e) {
+      setSalvando(false)
+      return setErro(`Não foi possível salvar: ${mensagemErro(e)}`)
+    }
     avisar(`${NOME_TIPO[tipo]} ${codigo(novo)} lançado${tipo === 'orcamento' ? '' : ' — estoque e caixa atualizados'}`)
     aoFechar()
   }
@@ -266,7 +276,7 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
                   className={inputCls}
                   value={instaladorId}
                   onChange={(e) => {
-                    setInstaladorId(e.target.value ? +e.target.value : '')
+                    setInstaladorId(e.target.value)
                   }}
                 >
                   <option value="">Escolha…</option>
@@ -356,7 +366,7 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
 
       <div className="flex justify-end gap-2 pb-1">
         <Botao variante="secundario" onClick={aoFechar}>Cancelar</Botao>
-        <Botao onClick={salvar}>Salvar {NOME_TIPO[tipo].toLowerCase()}</Botao>
+        <Botao onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : `Salvar ${NOME_TIPO[tipo].toLowerCase()}`}</Botao>
       </div>
     </div>
   )

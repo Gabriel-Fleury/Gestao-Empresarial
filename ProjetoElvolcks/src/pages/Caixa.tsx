@@ -9,7 +9,7 @@ export function Caixa() {
   const { lancamentos, colaborador } = useStore()
   const hoje = chaveDia(new Date())
   const [dia, setDia] = useState(hoje)
-  const [aberto, setAberto] = useState<number | null>(null)
+  const [aberto, setAberto] = useState<string | null>(null)
   const doDia = lancamentos.filter((l) => l.tipo !== 'orcamento' && chaveDia(l.criadoEm) === dia)
   const validos = doDia.filter((l) => l.situacao !== 'cancelado')
   const total = validos.reduce((s, l) => s + totalLanc(l), 0)

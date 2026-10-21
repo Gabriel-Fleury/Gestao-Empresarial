@@ -1,0 +1,43 @@
+# Publica o sistema em https://elvolcks-auto-som.web.app a cada commit na main.
+name: Publicar site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ProjetoElvolcks/**'
+      - '.github/workflows/publicar.yml'
+  workflow_dispatch: # botão "Run workflow" na aba Actions, para publicar manualmente
+
+# Dois commits seguidos: o mais novo espera o anterior terminar
+concurrency:
+  group: publicar-site
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ProjetoElvolcks
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ProjetoElvolcks/package-lock.json
+
+      - run: npm ci
+
+      # Se o código tiver erro, para aqui e o site no ar continua como estava
+      - run: npm run build
+
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ELVOLCKS_AUTO_SOM }}
+          projectId: elvolcks-auto-som
+          channelId: live
+          entryPoint: ./ProjetoElvolcks

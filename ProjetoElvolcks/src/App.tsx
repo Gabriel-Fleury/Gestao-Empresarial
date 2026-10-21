@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { NovoLancamento } from './components/NovoLancamento'
-import { Cadeado, Logo } from './components/ui'
+import { Botao, Cadeado, Campo, inputCls, Logo, Modal } from './components/ui'
 import { Caixa } from './pages/Caixa'
 import { Clientes } from './pages/Clientes'
 import { Colaboradores } from './pages/Colaboradores'
@@ -45,6 +45,7 @@ function Shell() {
   // Muda a cada clique no menu: reabrir a mesma página volta ao início dela (ex.: sai do histórico do colaborador)
   const [visita, setVisita] = useState(0)
   const [novo, setNovo] = useState<{ tipo: TipoLanc } | null>(null)
+  const [trocandoSenha, setTrocandoSenha] = useState(false)
 
   const ir = (p: Pagina) => {
     if (MENU.find((m) => m.id === p)?.admin && !isAdmin) return avisoAdmin()
@@ -90,7 +91,10 @@ function Shell() {
                 <div className="text-xs text-slate-400">{isAdmin ? 'Administrador' : 'Funcionário'}</div>
               </div>
             </div>
-            <button onClick={sair} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/5 hover:text-white">
+            <button onClick={() => setTrocandoSenha(true)} className="mt-3 w-full rounded-lg px-3 py-1.5 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white">
+              Trocar senha
+            </button>
+            <button onClick={sair} className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/5 hover:text-white">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" /></svg>
               Sair
             </button>
@@ -121,10 +125,10 @@ function Shell() {
           {pagina === 'estoque' && <Estoque />}
           {pagina === 'caixa' && isAdmin && <Caixa />}
           {pagina === 'relatorios' && <Relatorios />}
-          <p className="mt-10 text-center text-xs text-slate-400">Protótipo com dados fictícios · nada é salvo ao recarregar a página</p>
         </main>
       </div>
 
+      {trocandoSenha && <TrocarSenha aoFechar={() => setTrocandoSenha(false)} />}
       {novo && <NovoLancamento tipoInicial={novo.tipo} aoFechar={() => setNovo(null)} />}
 
       {toast && (
@@ -146,6 +150,50 @@ export default function App() {
 
 /** Sem login, nada do sistema aparece: só a tela de entrar. */
 function Portao() {
-  const { logado } = useStore()
-  return logado ? <Shell /> : <Login />
+  const { estado } = useStore()
+  if (estado === 'carregando')
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-950 text-slate-400">
+        <Logo size={72} />
+        <span className="text-sm">Carregando…</span>
+      </div>
+    )
+  return estado === 'logado' ? <Shell /> : <Login />
+}
+
+function TrocarSenha({ aoFechar }: { aoFechar: () => void }) {
+  const { trocarSenha } = useStore()
+  const [atual, setAtual] = useState('')
+  const [nova, setNova] = useState('')
+  const [repetida, setRepetida] = useState('')
+  const [erro, setErro] = useState('')
+  const [salvando, setSalvando] = useState(false)
+  const salvar = async (e: FormEvent) => {
+    e.preventDefault()
+    if (nova !== repetida) return setErro('As duas senhas novas não são iguais.')
+    setSalvando(true)
+    const falha = await trocarSenha(atual, nova)
+    setSalvando(false)
+    if (falha) return setErro(falha)
+    aoFechar()
+  }
+  const campo = (rotulo: string, valor: string, mudar: (v: string) => void, auto: string) => (
+    <Campo rotulo={rotulo}>
+      <input type="password" className={inputCls} autoComplete={auto} value={valor} onChange={(e) => { mudar(e.target.value); setErro('') }} />
+    </Campo>
+  )
+  return (
+    <Modal aberto aoFechar={aoFechar} titulo="Trocar minha senha" largura="max-w-sm">
+      <form onSubmit={salvar} className="space-y-3">
+        {campo('Senha atual', atual, setAtual, 'current-password')}
+        {campo('Nova senha (mín. 6 caracteres)', nova, setNova, 'new-password')}
+        {campo('Repita a nova senha', repetida, setRepetida, 'new-password')}
+        {erro && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>}
+        <div className="flex justify-end gap-2 pt-1">
+          <Botao type="button" variante="secundario" onClick={aoFechar}>Cancelar</Botao>
+          <Botao type="submit" disabled={salvando || !atual || !nova}>{salvando ? 'Salvando…' : 'Trocar senha'}</Botao>
+        </div>
+      </form>
+    </Modal>
+  )
 }

@@ -11,11 +11,11 @@ const NOME_FUNCAO = { vende: 'Vende', instala: 'Instala', admin: 'Administrador'
 export function Colaboradores() {
   const { colaboradores, lancamentos, isAdmin, usuario, alternarAtivo } = useStore()
   const [editando, setEditando] = useState<Colaborador | 'nova' | null>(null)
-  const [vendo, setVendo] = useState<number | null>(null)
+  const [vendo, setVendo] = useState<string | null>(null)
   const [periodo, setPeriodo] = useState(() => chaveMes(new Date()))
   const doMes = lancamentos.filter((l) => l.situacao !== 'cancelado' && noPeriodo(l.criadoEm, periodo))
 
-  const abrir = (id: number | null) => {
+  const abrir = (id: string | null) => {
     setVendo(id)
     window.scrollTo(0, 0)
   }
@@ -92,9 +92,13 @@ function FormPessoa({ pessoa, aoFechar }: { pessoa: Colaborador | null; aoFechar
   const [erro, setErro] = useState('')
   const jaTinhaAcesso = !!pessoa?.usuario
 
-  const salvar = () => {
+  const [salvando, setSalvando] = useState(false)
+
+  const salvar = async () => {
     if (comAcesso && !d.usuario.trim()) return setErro('Informe o usuário para entrar no sistema.')
-    const falha = salvarPessoa(pessoa?.id ?? null, comAcesso ? d : { ...d, usuario: '', senha: '' })
+    setSalvando(true)
+    const falha = await salvarPessoa(pessoa?.id ?? null, comAcesso ? d : { ...d, usuario: '', senha: '' })
+    setSalvando(false)
     if (falha) return setErro(falha)
     aoFechar()
   }
@@ -130,17 +134,18 @@ function FormPessoa({ pessoa, aoFechar }: { pessoa: Colaborador | null; aoFechar
                 <input className={inputCls} maxLength={20} autoCapitalize="none" spellCheck={false} value={d.usuario} onChange={(e) => setD({ ...d, usuario: e.target.value.toLowerCase() })} placeholder="Ex.: joao" />
               </Campo>
               <Campo rotulo={jaTinhaAcesso ? 'Nova senha' : 'Senha'}>
-                <input className={inputCls} type="text" autoComplete="new-password" value={d.senha} onChange={(e) => setD({ ...d, senha: e.target.value })} placeholder={jaTinhaAcesso ? 'Deixe vazio para manter' : 'Mín. 4 caracteres'} />
+                <input className={inputCls} type="text" autoComplete="new-password" value={d.senha} onChange={(e) => setD({ ...d, senha: e.target.value })} placeholder={jaTinhaAcesso ? 'Deixe vazio para manter' : 'Mín. 6 caracteres'} />
               </Campo>
             </div>
           )}
+          {comAcesso && jaTinhaAcesso && <p className="mt-2 text-xs text-slate-500">Para trocar a própria senha, cada pessoa usa <b>Trocar senha</b> no menu. Nova senha aqui só se a pessoa esqueceu.</p>}
           {!comAcesso && <p className="mt-1 text-xs text-slate-500">Ex.: instalador que só aparece nos serviços, sem entrar no sistema.</p>}
         </div>
 
         {erro && <p className="rounded-lg bg-red-50 px-3 py-2 text-red-700">{erro}</p>}
         <div className="flex justify-end gap-2">
           <Botao variante="secundario" onClick={aoFechar}>Cancelar</Botao>
-          <Botao onClick={salvar}>{pessoa ? 'Salvar' : 'Cadastrar'}</Botao>
+          <Botao onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : pessoa ? 'Salvar' : 'Cadastrar'}</Botao>
         </div>
       </div>
     </Modal>

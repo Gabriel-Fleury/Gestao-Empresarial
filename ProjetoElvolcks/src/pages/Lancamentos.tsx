@@ -13,7 +13,7 @@ export function Lancamentos({ tipo, novoLancamento }: { tipo: TipoLanc; novoLanc
   const [busca, setBusca] = useState('')
   const [periodo, setPeriodo] = useState<Periodo>('7')
   const [situacao, setSituacao] = useState('todas')
-  const [aberto, setAberto] = useState<number | null>(null)
+  const [aberto, setAberto] = useState<string | null>(null)
 
   const lista = useMemo(() => {
     const b = busca.trim().toLowerCase()

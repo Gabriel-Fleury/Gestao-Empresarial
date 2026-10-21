@@ -7,7 +7,7 @@ import { comissao, dataCurta, dataHora, dinheiro, formatarTelefone, LOJA, NOME_T
 import { NovoLancamento } from './NovoLancamento'
 import { Botao, Cadeado, Campo, InputDinheiro, inputCls, Logo, MAX_DESCRICAO, MAX_TEXTO, Modal, SeloSituacao } from './ui'
 
-export function Detalhe({ id, aoFechar }: { id: number; aoFechar: () => void }) {
+export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) {
   const { lancamentos, alteracoes, colaborador, produto, isAdmin, avisoAdmin, cancelar, editar, avisar } = useStore()
   const l = lancamentos.find((x) => x.id === id)
   const [modo, setModo] = useState<'ver' | 'editar' | 'cancelar' | 'converter'>('ver')
@@ -221,7 +221,7 @@ function Rodape({ rotulo, valor, fraco }: { rotulo: string; valor: string; fraco
   )
 }
 
-function DocumentoImpresso({ l, produtoNome, vendedor, instalador, ref }: { l: Lancamento; produtoNome: (id: number) => string; vendedor: string; instalador: string; ref?: Ref<HTMLDivElement> }) {
+function DocumentoImpresso({ l, produtoNome, vendedor, instalador, ref }: { l: Lancamento; produtoNome: (id: string) => string; vendedor: string; instalador: string; ref?: Ref<HTMLDivElement> }) {
   const orc = l.tipo === 'orcamento'
   return (
     <div ref={ref} className="documento-impresso hidden bg-white text-[11pt] text-black print:block">

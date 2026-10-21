@@ -1,7 +1,7 @@
-import { totalLanc } from './mock'
 import type { Lancamento } from './types'
 
-export { totalLanc }
+export const totalLanc = (l: Pick<Lancamento, 'itens' | 'maoDeObra' | 'desconto'>) =>
+  +(l.itens.reduce((s, i) => s + i.quantidade * i.preco, 0) + l.maoDeObra - l.desconto).toFixed(2)
 
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 export const dinheiro = (v: number) => brl.format(v)

@@ -1,25 +1,26 @@
 export type Funcao = 'vende' | 'instala' | 'admin'
 
 export interface Colaborador {
-  id: number
+  id: string
   nome: string
   funcoes: Funcao[]
   temLogin: boolean
   ativo: boolean
   comissaoPadrao: number
-  /** Login do protótipo (só visual, sem segurança real) */
+  /** Nome de usuário para entrar no sistema */
   usuario?: string
-  senha?: string
+  /** Conta do Firebase Authentication ligada a esta pessoa */
+  uid?: string
 }
 
 export interface Cliente {
-  id: number
+  id: string
   nome: string
   telefone: string
 }
 
 export interface Produto {
-  id: number
+  id: string
   nome: string
   preco: number
   quantidade: number
@@ -28,11 +29,11 @@ export interface Produto {
 export type TipoMov = 'entrada' | 'ajuste' | 'venda' | 'servico' | 'cancelamento'
 
 export interface MovEstoque {
-  id: number
-  produtoId: number
+  id: string
+  produtoId: string
   tipo: TipoMov
   quantidade: number
-  colaboradorId: number
+  colaboradorId: string
   data: string
   lancamentoNumero?: string
 }
@@ -44,7 +45,7 @@ export type Forma = 'PIX' | 'Dinheiro' | 'Débito' | 'Crédito à vista' | 'Cré
 export const FORMAS: Forma[] = ['PIX', 'Dinheiro', 'Débito', 'Crédito à vista', 'Crédito parcelado']
 
 export interface Item {
-  produtoId: number
+  produtoId: string
   quantidade: number
   preco: number
 }
@@ -58,7 +59,7 @@ export interface Pagamento {
 export type Situacao = 'ativo' | 'cancelado' | 'convertido'
 
 export interface Lancamento {
-  id: number
+  id: string
   tipo: TipoLanc
   numero: number
   cliente: string
@@ -68,23 +69,23 @@ export interface Lancamento {
   descricao?: string
   itens: Item[]
   maoDeObra: number
-  instaladorId?: number
+  instaladorId?: string
   comissaoPct: number
   desconto: number
   pagamentos: Pagamento[]
   nfEmitida: boolean
   nfNumero?: string
   situacao: Situacao
-  origemId?: number
-  convertidoEmId?: number
-  criadoPor: number
+  origemId?: string
+  convertidoEmId?: string
+  criadoPor: string
   criadoEm: string
 }
 
 export interface Alteracao {
-  id: number
-  lancamentoId: number
-  colaboradorId: number
+  id: string
+  lancamentoId: string
+  colaboradorId: string
   data: string
   descricao: string
 }

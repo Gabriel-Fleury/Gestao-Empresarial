@@ -8,7 +8,7 @@ import type { Pagina } from '../App'
 
 export function Inicio({ novoLancamento, ir }: { novoLancamento: () => void; ir: (p: Pagina) => void }) {
   const { lancamentos, produtos, isAdmin, avisoAdmin, usuario, colaborador } = useStore()
-  const [aberto, setAberto] = useState<number | null>(null)
+  const [aberto, setAberto] = useState<string | null>(null)
   const deHoje = lancamentos.filter((l) => ehHoje(l.criadoEm))
   const caixaHoje = deHoje.filter(entraNoCaixa).reduce((s, l) => s + totalLanc(l), 0)
   const servicosHoje = deHoje.filter((l) => l.tipo === 'servico' && l.situacao !== 'cancelado').length

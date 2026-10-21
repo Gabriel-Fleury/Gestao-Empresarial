@@ -9,7 +9,7 @@ export function Relatorios() {
   const [mes, setMes] = useState(meses[0])
   const doMes = lancamentos.filter((l) => entraNoCaixa(l) && chaveMes(l.criadoEm) === mes)
 
-  const pecas = new Map<number, { q: number; v: number }>()
+  const pecas = new Map<string, { q: number; v: number }>()
   for (const l of doMes) for (const i of l.itens) {
     const a = pecas.get(i.produtoId) ?? { q: 0, v: 0 }
     pecas.set(i.produtoId, { q: a.q + i.quantidade, v: a.v + i.quantidade * i.preco })

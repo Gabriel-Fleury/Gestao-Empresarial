@@ -64,8 +64,11 @@ function FormCliente({ cliente, aoFechar }: { cliente?: Cliente; aoFechar: () =>
   const [nome, setNome] = useState(cliente?.nome ?? '')
   const [telefone, setTelefone] = useState(cliente?.telefone ?? '')
   const [erro, setErro] = useState('')
-  const salvar = () => {
-    const e = salvarCliente(cliente?.id ?? null, { nome, telefone })
+  const [salvando, setSalvando] = useState(false)
+  const salvar = async () => {
+    setSalvando(true)
+    const e = await salvarCliente(cliente?.id ?? null, { nome, telefone })
+    setSalvando(false)
     if (e) return setErro(e)
     aoFechar()
   }
@@ -82,7 +85,7 @@ function FormCliente({ cliente, aoFechar }: { cliente?: Cliente; aoFechar: () =>
       </div>
       <div className="mt-4 flex justify-end gap-2">
         <Botao variante="secundario" onClick={aoFechar}>Cancelar</Botao>
-        <Botao onClick={salvar}>{cliente ? 'Salvar' : 'Cadastrar'}</Botao>
+        <Botao onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : cliente ? 'Salvar' : 'Cadastrar'}</Botao>
       </div>
     </Modal>
   )
