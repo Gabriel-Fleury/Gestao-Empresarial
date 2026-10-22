@@ -1,2 +1,0 @@
-# Gestão Empresarial
-
