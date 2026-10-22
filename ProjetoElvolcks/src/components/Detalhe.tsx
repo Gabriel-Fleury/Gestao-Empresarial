@@ -241,8 +241,9 @@ function DocumentoImpresso({ l, produtoNome, vendedor, instalador, ref }: { l: L
         <Logo size={96} />
         <div className="flex-1">
           <div className="font-marca text-3xl font-bold uppercase">{LOJA.nome}</div>
-          <div>{LOJA.endereco}</div>
-          <div>WhatsApp {LOJA.whatsapp} · {LOJA.cnpj}</div>
+          <div>{LOJA.razaoSocial} · {LOJA.cnpj}</div>
+          <div>{LOJA.endereco} · {LOJA.cep}</div>
+          <div>WhatsApp {LOJA.whatsapp}</div>
         </div>
         <div className="text-right">
           <div className="font-display text-2xl font-bold uppercase">{NOME_TIPO[l.tipo]}</div>
@@ -306,8 +307,11 @@ function DocumentoImpresso({ l, produtoNome, vendedor, instalador, ref }: { l: L
       <p className="mt-10 text-sm">
         {orc ? 'Orçamento sem reserva de peças. Valores sujeitos à disponibilidade em estoque.' : 'Obrigado pela preferência! Este documento não substitui a nota fiscal.'}
       </p>
-      <div className="mt-16 grid break-inside-avoid grid-cols-2 gap-12 text-center">
-        <div className="border-t border-black pt-1">Assinatura do vendedor</div>
+      <div className="mt-16 grid break-inside-avoid grid-cols-2 items-start gap-12 text-center">
+        <div>
+          <div className="border-t border-black pt-1">Assinatura do vendedor</div>
+          <img src="/emblema-elvolcks-13anos.svg" alt="Elvolcks Auto Som — 13 anos" width={110} height={129} className="mx-auto mt-4" />
+        </div>
         <div className="border-t border-black pt-1">Assinatura do cliente</div>
       </div>
     </div>

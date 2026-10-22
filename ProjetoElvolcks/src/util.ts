@@ -83,7 +83,9 @@ export const NOME_TIPO = { orcamento: 'Orçamento', venda: 'Venda', servico: 'Se
 
 export const LOJA = {
   nome: 'Elvolcks Auto Som',
+  razaoSocial: 'M.F Martins LTDA',
   endereco: 'Rua J, nº 165, Setor Bela Vista, Barra do Garças – MT',
+  cep: 'CEP 78603-222',
   whatsapp: '(66) 99956-0726',
   cnpj: 'CNPJ 18.980.124/0001-46',
 }
