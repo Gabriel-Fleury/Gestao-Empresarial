@@ -46,9 +46,9 @@ export function Estoque() {
       {aba === 'produtos' ? (
         <Painel>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[820px] text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs tracking-wide text-slate-500 uppercase">
-                <tr><th className="w-16 py-2.5 pl-4">Cód.</th><th className="px-3 py-2.5">Produto</th><th className="px-3 py-2.5">Marca</th><th className="px-3 py-2.5 text-right">Preço de venda</th><th className="px-3 py-2.5 text-right">Quantidade</th><th className="px-4 py-2.5 text-right">Ações</th></tr>
+                <tr><th className="w-16 py-2.5 pl-4">Cód.</th><th className="px-3 py-2.5">Produto</th><th className="px-3 py-2.5">Marca</th><th className="px-3 py-2.5 text-right">Preço de custo</th><th className="px-3 py-2.5 text-right">Preço de venda</th><th className="px-3 py-2.5 text-right">Quantidade</th><th className="px-4 py-2.5 text-center">Ações</th></tr>
               </thead>
               <tbody>
                 {lista.map((p) => (
@@ -56,11 +56,12 @@ export function Estoque() {
                     <td className="py-2.5 pl-4 text-slate-500 tabular-nums">{p.codigo ?? '—'}</td>
                     <td className="px-3 py-2.5 font-medium">{p.nome}</td>
                     <td className="px-3 py-2.5 text-slate-600">{p.marca || '—'}</td>
+                    <td className="px-3 py-2.5 text-right text-slate-400 tabular-nums">{p.custo ? dinheiro(p.custo) : '—'}</td>
                     <td className="px-3 py-2.5 text-right text-emerald-700 tabular-nums">{dinheiro(p.preco)}</td>
                     <td className="px-3 py-2.5 text-right">
                       <span className={`rounded-md px-2 py-0.5 font-semibold tabular-nums ${p.quantidade < 0 ? 'bg-red-600 text-white' : p.quantidade <= 1 ? 'bg-red-50 text-red-700' : ''}`}>{qtd(p.quantidade)}</span>
                     </td>
-                    <td className="px-4 py-2 text-right whitespace-nowrap">
+                    <td className="px-4 py-2 text-center whitespace-nowrap">
                       <button onClick={() => setMexendo({ p, tipo: 'entrada' })} className="rounded-md px-2 py-1 text-sm font-semibold text-blue-700 hover:bg-blue-50">Entrada</button>
                       <button onClick={() => setMexendo({ p, tipo: 'ajuste' })} className="rounded-md px-2 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100">Corrigir</button>
                     </td>
@@ -124,12 +125,13 @@ function CorrigirProduto({ p, aoFechar }: { p: Produto; aoFechar: () => void }) 
   const { corrigirProduto, avisar } = useStore()
   const [nome, setNome] = useState(p.nome)
   const [marca, setMarca] = useState(p.marca ?? '')
+  const [custo, setCusto] = useState(p.custo ?? 0)
   const [preco, setPreco] = useState(p.preco)
   const [quantidade, setQuantidade] = useState(p.quantidade)
   const salvar = async () => {
     const delta = +(quantidade - p.quantidade).toFixed(2)
-    const dados = { nome: nome.trim(), marca: marca.trim(), preco }
-    if (!delta && dados.nome === p.nome && dados.marca === (p.marca ?? '') && preco === p.preco) return aoFechar()
+    const dados = { nome: nome.trim(), marca: marca.trim(), custo, preco }
+    if (!delta && dados.nome === p.nome && dados.marca === (p.marca ?? '') && custo === (p.custo ?? 0) && preco === p.preco) return aoFechar()
     if (await corrigirProduto(p.id, dados, delta)) {
       avisar(`${dados.nome}: dados corrigidos`)
       aoFechar()
@@ -142,6 +144,7 @@ function CorrigirProduto({ p, aoFechar }: { p: Produto; aoFechar: () => void }) 
         <Campo rotulo="Nome"><input autoFocus className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} /></Campo>
         <Campo rotulo="Marca"><input className={inputCls} value={marca} onChange={(e) => setMarca(e.target.value)} /></Campo>
         <div className="grid grid-cols-2 gap-3">
+          <Campo rotulo="Preço de custo (R$)"><input type="number" step="0.01" className={inputCls} value={custo || ''} onChange={(e) => setCusto(+e.target.value)} /></Campo>
           <Campo rotulo="Preço de venda (R$)"><input type="number" step="0.01" className={inputCls} value={preco || ''} onChange={(e) => setPreco(+e.target.value)} /></Campo>
           <Campo rotulo="Quantidade na prateleira"><input type="number" step="any" className={inputCls} value={quantidade} onChange={(e) => setQuantidade(+e.target.value)} /></Campo>
         </div>
@@ -159,6 +162,7 @@ function NovoProduto({ aoFechar }: { aoFechar: () => void }) {
   const { novoProduto } = useStore()
   const [nome, setNome] = useState('')
   const [marca, setMarca] = useState('')
+  const [custo, setCusto] = useState(0)
   const [preco, setPreco] = useState(0)
   const [quantidade, setQuantidade] = useState(0)
   return (
@@ -167,6 +171,7 @@ function NovoProduto({ aoFechar }: { aoFechar: () => void }) {
         <Campo rotulo="Nome"><input autoFocus className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} /></Campo>
         <Campo rotulo="Marca"><input className={inputCls} value={marca} onChange={(e) => setMarca(e.target.value)} /></Campo>
         <div className="grid grid-cols-2 gap-3">
+          <Campo rotulo="Preço de custo (R$)"><input type="number" step="0.01" className={inputCls} value={custo || ''} onChange={(e) => setCusto(+e.target.value)} /></Campo>
           <Campo rotulo="Preço de venda (R$)"><input type="number" step="0.01" className={inputCls} value={preco || ''} onChange={(e) => setPreco(+e.target.value)} /></Campo>
           <Campo rotulo="Quantidade"><input type="number" step="any" className={inputCls} value={quantidade || ''} onChange={(e) => setQuantidade(+e.target.value)} /></Campo>
         </div>
@@ -174,7 +179,7 @@ function NovoProduto({ aoFechar }: { aoFechar: () => void }) {
       <p className="mt-2 text-xs text-slate-500">O código do produto é gerado automaticamente ao cadastrar.</p>
       <div className="mt-4 flex justify-end gap-2">
         <Botao variante="secundario" onClick={aoFechar}>Cancelar</Botao>
-        <Botao disabled={!nome.trim() || preco <= 0} onClick={() => { novoProduto(nome.trim(), marca.trim(), preco, quantidade); aoFechar() }}>Cadastrar</Botao>
+        <Botao disabled={!nome.trim() || preco <= 0} onClick={() => { novoProduto(nome.trim(), marca.trim(), custo, preco, quantidade); aoFechar() }}>Cadastrar</Botao>
       </div>
     </Modal>
   )

@@ -25,6 +25,8 @@ export interface Produto {
   codigo?: number
   nome: string
   marca?: string
+  /** Preço de custo (quanto a loja pagou); opcional */
+  custo?: number
   preco: number
   quantidade: number
 }
