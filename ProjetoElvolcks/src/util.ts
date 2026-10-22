@@ -68,7 +68,7 @@ export const ultimosMeses = (n: number) =>
     return chaveMes(new Date(d.getFullYear(), d.getMonth() - i, 1))
   })
 
-/** Lançamentos que entram no caixa: vendas e serviços não cancelados. */
+/** Lançamentos que entram no caixa: vendas e serviço não cancelados. */
 export const entraNoCaixa = (l: Lancamento) => l.tipo !== 'orcamento' && l.situacao !== 'cancelado'
 
 export const subtotalPecas = (l: Pick<Lancamento, 'itens'>) => l.itens.reduce((s, i) => s + i.quantidade * i.preco, 0)
