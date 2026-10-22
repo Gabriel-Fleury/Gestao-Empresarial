@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { mensagemErro } from '../firebase'
 import { codigo, useStore } from '../store'
 import { FORMAS, type Forma, type Item, type Lancamento, type TipoLanc } from '../types'
-import { chaveDia, dinheiro, formatarTelefone, NOME_TIPO, normalizar, qtd, telefoneValido, totalLanc } from '../util'
+import { buscarProdutos, chaveDia, dinheiro, formatarTelefone, NOME_TIPO, normalizar, qtd, telefoneValido, totalLanc } from '../util'
 import { Botao, Campo, InputDinheiro, inputCls, MAX_DESCRICAO, MAX_TEXTO, Modal } from './ui'
 
 const LIMITE_PARCELAS = 12 // limite ainda a definir com o dono
@@ -89,9 +89,8 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
   }, [cliente, telefone, clientes, focoCliente])
 
   const sugestoes = useMemo(() => {
-    const b = busca.trim().toLowerCase()
-    if (!b) return []
-    return produtos.filter((p) => p.nome.toLowerCase().includes(b)).slice(0, 6)
+    if (!busca.trim()) return []
+    return buscarProdutos(produtos, busca).slice(0, 6)
   }, [busca, produtos])
 
   const addItem = (id: string) => {
@@ -199,7 +198,7 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
                 {sugestoes.map((p) => (
                   <li key={p.id}>
                     <button type="button" onClick={() => addItem(p.id)} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-blue-50">
-                      <span>{p.nome}</span>
+                      <span>{p.codigo && <span className="text-xs text-slate-400 tabular-nums">#{p.codigo} </span>}{p.nome}{p.marca && <span className="text-slate-500"> · {p.marca}</span>}</span>
                       <span className="shrink-0 text-xs text-slate-500">
                         <span className={p.quantidade <= 1 ? 'font-semibold text-red-600' : ''}>{qtd(p.quantidade)} em estoque</span> · <span className="text-emerald-700">{dinheiro(p.preco)}</span>
                       </span>

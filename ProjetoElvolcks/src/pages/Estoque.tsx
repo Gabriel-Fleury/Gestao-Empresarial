@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Botao, Campo, inputCls, Modal, Painel, Selo, Titulo, Vazio } from '../components/ui'
 import { useStore } from '../store'
 import type { Produto, TipoMov } from '../types'
-import { dataHora, dinheiro, qtd } from '../util'
+import { buscarProdutos, dataHora, dinheiro, qtd } from '../util'
 
 const NOME_MOV: Record<TipoMov, { t: string; cor: 'verde' | 'azul' | 'cinza' | 'ambar' | 'vermelho' }> = {
   entrada: { t: 'Entrada', cor: 'verde' },
@@ -20,9 +20,7 @@ export function Estoque() {
   const [mexendo, setMexendo] = useState<{ p: Produto; tipo: 'entrada' | 'ajuste' } | null>(null)
   const [novo, setNovo] = useState(false)
 
-  const lista = produtos
-    .filter((p) => p.nome.toLowerCase().includes(busca.trim().toLowerCase()) && (!soBaixo || p.quantidade <= 1))
-    .sort((a, b) => a.nome.localeCompare(b.nome))
+  const lista = buscarProdutos(produtos, busca).filter((p) => !soBaixo || p.quantidade <= 1)
 
   return (
     <>
@@ -37,7 +35,7 @@ export function Estoque() {
         </div>
         {aba === 'produtos' && (
           <>
-            <input className={`${inputCls} max-w-xs`} placeholder="Buscar produto…" value={busca} onChange={(e) => setBusca(e.target.value)} />
+            <input className={`${inputCls} max-w-xs`} placeholder="Buscar por código, nome ou marca…" value={busca} onChange={(e) => setBusca(e.target.value)} />
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" className="size-4 accent-red-600" checked={soBaixo} onChange={(e) => setSoBaixo(e.target.checked)} /> Só estoque baixo
             </label>
@@ -48,14 +46,16 @@ export function Estoque() {
       {aba === 'produtos' ? (
         <Painel>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs tracking-wide text-slate-500 uppercase">
-                <tr><th className="px-4 py-2.5">Produto</th><th className="px-3 py-2.5 text-right">Preço de venda</th><th className="px-3 py-2.5 text-right">Quantidade</th><th className="px-4 py-2.5 text-right">Ações</th></tr>
+                <tr><th className="w-16 py-2.5 pl-4">Cód.</th><th className="px-3 py-2.5">Produto</th><th className="px-3 py-2.5">Marca</th><th className="px-3 py-2.5 text-right">Preço de venda</th><th className="px-3 py-2.5 text-right">Quantidade</th><th className="px-4 py-2.5 text-right">Ações</th></tr>
               </thead>
               <tbody>
                 {lista.map((p) => (
                   <tr key={p.id} className="border-b border-slate-100">
-                    <td className="px-4 py-2.5 font-medium">{p.nome}</td>
+                    <td className="py-2.5 pl-4 text-slate-500 tabular-nums">{p.codigo ?? '—'}</td>
+                    <td className="px-3 py-2.5 font-medium">{p.nome}</td>
+                    <td className="px-3 py-2.5 text-slate-600">{p.marca || '—'}</td>
                     <td className="px-3 py-2.5 text-right text-emerald-700 tabular-nums">{dinheiro(p.preco)}</td>
                     <td className="px-3 py-2.5 text-right">
                       <span className={`rounded-md px-2 py-0.5 font-semibold tabular-nums ${p.quantidade < 0 ? 'bg-red-600 text-white' : p.quantidade <= 1 ? 'bg-red-50 text-red-700' : ''}`}>{qtd(p.quantidade)}</span>
@@ -122,20 +122,23 @@ function MexerEstoque({ p, tipo, aoFechar }: { p: Produto; tipo: 'entrada' | 'aj
 function NovoProduto({ aoFechar }: { aoFechar: () => void }) {
   const { novoProduto } = useStore()
   const [nome, setNome] = useState('')
+  const [marca, setMarca] = useState('')
   const [preco, setPreco] = useState(0)
   const [quantidade, setQuantidade] = useState(0)
   return (
     <Modal aberto aoFechar={aoFechar} titulo="Novo produto" largura="max-w-md">
       <div className="space-y-3">
         <Campo rotulo="Nome"><input autoFocus className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} /></Campo>
+        <Campo rotulo="Marca"><input className={inputCls} value={marca} onChange={(e) => setMarca(e.target.value)} /></Campo>
         <div className="grid grid-cols-2 gap-3">
           <Campo rotulo="Preço de venda (R$)"><input type="number" step="0.01" className={inputCls} value={preco || ''} onChange={(e) => setPreco(+e.target.value)} /></Campo>
           <Campo rotulo="Quantidade"><input type="number" step="any" className={inputCls} value={quantidade || ''} onChange={(e) => setQuantidade(+e.target.value)} /></Campo>
         </div>
       </div>
+      <p className="mt-2 text-xs text-slate-500">O código do produto é gerado automaticamente ao cadastrar.</p>
       <div className="mt-4 flex justify-end gap-2">
         <Botao variante="secundario" onClick={aoFechar}>Cancelar</Botao>
-        <Botao disabled={!nome.trim() || preco <= 0} onClick={() => { novoProduto(nome.trim(), preco, quantidade); aoFechar() }}>Cadastrar</Botao>
+        <Botao disabled={!nome.trim() || preco <= 0} onClick={() => { novoProduto(nome.trim(), marca.trim(), preco, quantidade); aoFechar() }}>Cadastrar</Botao>
       </div>
     </Modal>
   )

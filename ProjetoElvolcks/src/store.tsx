@@ -49,7 +49,7 @@ interface Store {
   cancelar: (id: string) => Promise<void>
   editar: (id: string, mudancas: Partial<Lancamento>, descricao: string) => Promise<void>
   movimentarEstoque: (produtoId: string, tipo: TipoMov, quantidade: number) => Promise<void>
-  novoProduto: (nome: string, preco: number, quantidade: number) => Promise<void>
+  novoProduto: (nome: string, marca: string, preco: number, quantidade: number) => Promise<void>
   produto: (id: string) => Produto | undefined
   colaborador: (id?: string) => Colaborador | undefined
 }
@@ -194,14 +194,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const novoProduto = async (nome: string, preco: number, quantidade: number) => {
+  const novoProduto = async (nome: string, marca: string, preco: number, quantidade: number) => {
     const ref = doc(collection(db, 'produtos'))
-    const b = writeBatch(db)
-    b.set(ref, { nome, preco, quantidade: 0 })
-    if (quantidade) escreverEstoque(b, [{ produtoId: ref.id, quantidade }], 'entrada', 1)
     try {
-      await b.commit()
-      avisar(`${nome} cadastrado`)
+      // Transação: o código do produto (1, 2, 3…) nunca se repete
+      const num = await runTransaction(db, async (t) => {
+        const contRef = doc(db, 'contadores', 'numeros')
+        const cont = await t.get(contRef)
+        const n = ((cont.data()?.produto as number | undefined) ?? 0) + 1
+        t.set(contRef, { produto: n }, { merge: true })
+        const novo: Omit<Produto, 'id'> = { codigo: n, nome, ...(marca && { marca }), preco, quantidade: 0 }
+        t.set(ref, novo)
+        if (quantidade) escreverEstoque(t, [{ produtoId: ref.id, quantidade }], 'entrada', 1)
+        return n
+      })
+      avisar(`${nome} cadastrado com o código ${num}`)
     } catch (e) {
       falhou(e)
     }

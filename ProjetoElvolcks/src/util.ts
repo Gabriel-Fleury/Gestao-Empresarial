@@ -1,4 +1,4 @@
-import type { Lancamento } from './types'
+import type { Lancamento, Produto } from './types'
 
 export const totalLanc = (l: Pick<Lancamento, 'itens' | 'maoDeObra' | 'desconto'>) =>
   +(l.itens.reduce((s, i) => s + i.quantidade * i.preco, 0) + l.maoDeObra - l.desconto).toFixed(2)
@@ -27,6 +27,15 @@ export const telefoneValido = (s: string) => /^\d{10,11}$/.test(s.replace(/\D/g,
 
 /** Para buscar sem diferenciar maiúscula nem acento */
 export const normalizar = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+
+/** Busca por c\u00f3digo, nome ou marca ("12", "modulo bosch"\u2026); o produto com o c\u00f3digo exato vem primeiro */
+export const buscarProdutos = (produtos: Produto[], busca: string) => {
+  const termos = normalizar(busca).split(/\s+/).filter(Boolean)
+  const exato = (p: Produto) => Number(termos.length === 1 && String(p.codigo) === termos[0])
+  return produtos
+    .filter((p) => termos.every((t) => normalizar(`${p.codigo ?? ''} ${p.nome} ${p.marca ?? ''}`).includes(t)))
+    .sort((a, b) => exato(b) - exato(a) || a.nome.localeCompare(b.nome))
+}
 
 export const chaveDia = (d: Date | string) => {
   const x = new Date(d)

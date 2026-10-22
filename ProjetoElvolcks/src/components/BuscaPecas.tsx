@@ -1,21 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store'
-import { dinheiro, qtd } from '../util'
+import { buscarProdutos, dinheiro, qtd } from '../util'
 import { inputCls } from './ui'
 
-/** Ignora maiúsculas e acentos: "modulo" encontra "Módulo". */
-const simplificar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-
-/** Só consulta: mostra preço e quantidade em estoque das peças. */
+/** Só consulta: mostra preço e quantidade em estoque das peças. Busca por código, nome ou marca. */
 export function BuscaPecas() {
   const { produtos } = useStore()
   const [busca, setBusca] = useState('')
 
-  const achados = useMemo(() => {
-    const termos = simplificar(busca).split(/\s+/).filter(Boolean)
-    if (!termos.length) return []
-    return produtos.filter((p) => termos.every((t) => simplificar(p.nome).includes(t))).sort((a, b) => a.nome.localeCompare(b.nome))
-  }, [busca, produtos])
+  const achados = useMemo(() => (busca.trim() ? buscarProdutos(produtos, busca) : []), [busca, produtos])
 
   return (
     <div className="relative mb-5">
@@ -26,7 +19,7 @@ export function BuscaPecas() {
       <input
         type="search"
         className={`${inputCls} py-2.5 pl-10 text-base shadow-sm`}
-        placeholder="Consultar peça: preço e estoque…"
+        placeholder="Consultar peça por código, nome ou marca…"
         value={busca}
         onChange={(e) => setBusca(e.target.value)}
         onKeyDown={(e) => e.key === 'Escape' && setBusca('')}
@@ -38,7 +31,8 @@ export function BuscaPecas() {
             <ul className="max-h-80 divide-y divide-slate-100 overflow-y-auto">
               {achados.map((p) => (
                 <li key={p.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                  <span className="min-w-0 flex-1">{p.nome}</span>
+                  {p.codigo && <span className="w-12 shrink-0 text-xs font-semibold text-slate-400 tabular-nums">#{p.codigo}</span>}
+                  <span className="min-w-0 flex-1">{p.nome}{p.marca && <span className="text-slate-500"> · {p.marca}</span>}</span>
                   <span className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums ${p.quantidade <= 0 ? 'bg-red-600 text-white' : p.quantidade <= 1 ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-700'}`}>
                     {qtd(p.quantidade)} em estoque
                   </span>

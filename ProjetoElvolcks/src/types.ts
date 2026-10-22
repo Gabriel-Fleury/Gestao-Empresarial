@@ -21,7 +21,10 @@ export interface Cliente {
 
 export interface Produto {
   id: string
+  /** Código sequencial (1, 2, 3…) gerado no cadastro; produtos antigos podem não ter */
+  codigo?: number
   nome: string
+  marca?: string
   preco: number
   quantidade: number
 }
