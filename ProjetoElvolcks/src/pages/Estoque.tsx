@@ -88,7 +88,8 @@ export function Estoque() {
         </Painel>
       )}
 
-      {mexendo && <MexerEstoque {...mexendo} aoFechar={() => setMexendo(null)} />}
+      {mexendo?.tipo === 'entrada' && <MexerEstoque {...mexendo} aoFechar={() => setMexendo(null)} />}
+      {mexendo?.tipo === 'ajuste' && <CorrigirProduto p={mexendo.p} aoFechar={() => setMexendo(null)} />}
       {novo && <NovoProduto aoFechar={() => setNovo(false)} />}
     </>
   )
@@ -114,6 +115,41 @@ function MexerEstoque({ p, tipo, aoFechar }: { p: Produto; tipo: 'entrada' | 'aj
       <div className="mt-4 flex justify-end gap-2">
         <Botao variante="secundario" onClick={aoFechar}>Cancelar</Botao>
         <Botao onClick={salvar}>Salvar</Botao>
+      </div>
+    </Modal>
+  )
+}
+
+function CorrigirProduto({ p, aoFechar }: { p: Produto; aoFechar: () => void }) {
+  const { corrigirProduto, avisar } = useStore()
+  const [nome, setNome] = useState(p.nome)
+  const [marca, setMarca] = useState(p.marca ?? '')
+  const [preco, setPreco] = useState(p.preco)
+  const [quantidade, setQuantidade] = useState(p.quantidade)
+  const salvar = async () => {
+    const delta = +(quantidade - p.quantidade).toFixed(2)
+    const dados = { nome: nome.trim(), marca: marca.trim(), preco }
+    if (!delta && dados.nome === p.nome && dados.marca === (p.marca ?? '') && preco === p.preco) return aoFechar()
+    if (await corrigirProduto(p.id, dados, delta)) {
+      avisar(`${dados.nome}: dados corrigidos`)
+      aoFechar()
+    }
+  }
+  return (
+    <Modal aberto aoFechar={aoFechar} titulo="Corrigir produto" largura="max-w-md">
+      {p.codigo && <p className="mb-3 text-sm text-slate-500">Código {p.codigo}</p>}
+      <div className="space-y-3">
+        <Campo rotulo="Nome"><input autoFocus className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} /></Campo>
+        <Campo rotulo="Marca"><input className={inputCls} value={marca} onChange={(e) => setMarca(e.target.value)} /></Campo>
+        <div className="grid grid-cols-2 gap-3">
+          <Campo rotulo="Preço de venda (R$)"><input type="number" step="0.01" className={inputCls} value={preco || ''} onChange={(e) => setPreco(+e.target.value)} /></Campo>
+          <Campo rotulo="Quantidade na prateleira"><input type="number" step="any" className={inputCls} value={quantidade} onChange={(e) => setQuantidade(+e.target.value)} /></Campo>
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-slate-500">Mudança de quantidade fica registrada no histórico com seu nome, data e hora. O novo preço vale para os próximos lançamentos.</p>
+      <div className="mt-4 flex justify-end gap-2">
+        <Botao variante="secundario" onClick={aoFechar}>Cancelar</Botao>
+        <Botao disabled={!nome.trim() || preco <= 0} onClick={salvar}>Salvar</Botao>
       </div>
     </Modal>
   )

@@ -50,6 +50,8 @@ interface Store {
   editar: (id: string, mudancas: Partial<Lancamento>, descricao: string) => Promise<void>
   movimentarEstoque: (produtoId: string, tipo: TipoMov, quantidade: number) => Promise<void>
   novoProduto: (nome: string, marca: string, preco: number, quantidade: number) => Promise<void>
+  /** Muda nome, marca e preço; `delta` ≠ 0 também corrige a quantidade (fica no histórico como correção) */
+  corrigirProduto: (id: string, dados: Pick<Produto, 'nome' | 'marca' | 'preco'>, delta: number) => Promise<boolean>
   produto: (id: string) => Produto | undefined
   colaborador: (id?: string) => Colaborador | undefined
 }
@@ -214,6 +216,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const corrigirProduto = async (id: string, d: Pick<Produto, 'nome' | 'marca' | 'preco'>, delta: number) => {
+    const b = writeBatch(db)
+    b.update(doc(db, 'produtos', id), { nome: d.nome, marca: d.marca || deleteField(), preco: d.preco })
+    if (delta) escreverEstoque(b, [{ produtoId: id, quantidade: Math.abs(delta) }], 'ajuste', delta < 0 ? -1 : 1)
+    try {
+      await b.commit()
+      return true
+    } catch (e) {
+      falhou(e)
+      return false
+    }
+  }
+
   const entrar = async (login: string, senha: string) => {
     setAvisoLogin('')
     try {
@@ -325,7 +340,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     estado, logado, usuario: usuario!, avisoLogin, isAdmin, entrar, sair: () => signOut(auth), trocarSenha, salvarPessoa, alternarAtivo,
     colaboradores: colaboradores ?? [], clientes, salvarCliente, produtos, lancamentos, movimentacoes, alteracoes, toast, avisar,
     avisoAdmin: () => avisar(AVISO_ADMIN, 'erro'),
-    lancar, cancelar, editar, movimentarEstoque, novoProduto,
+    lancar, cancelar, editar, movimentarEstoque, novoProduto, corrigirProduto,
     produto: (id) => produtos.find((p) => p.id === id),
     colaborador: (id) => colaboradores?.find((c) => c.id === id),
   }
