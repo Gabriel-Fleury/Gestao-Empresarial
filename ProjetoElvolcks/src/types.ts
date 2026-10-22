@@ -70,6 +70,10 @@ export interface Lancamento {
   cliente: string
   telefone?: string
   veiculo: string
+  /** Só em serviço realizado */
+  placa?: string
+  /** Quilometragem do veículo no serviço (só em serviço realizado) */
+  km?: number
   /** Serviço realizado: o que foi feito (ex.: montagem de peça trazida pelo cliente) */
   descricao?: string
   itens: Item[]

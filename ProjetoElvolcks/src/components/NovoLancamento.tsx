@@ -55,6 +55,8 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
   const [telefone, setTelefone] = useState(origem?.telefone ?? '')
   const [focoCliente, setFocoCliente] = useState(false)
   const [veiculo, setVeiculo] = useState(origem?.veiculo ?? '')
+  const [placa, setPlaca] = useState(origem?.placa ?? '')
+  const [km, setKm] = useState(origem?.km ?? 0)
   const [data, setData] = useState(() => chaveDia(new Date()))
   const [descricao, setDescricao] = useState(origem?.descricao ?? '')
   const [itens, setItens] = useState<Item[]>(origem?.itens.map((i) => ({ ...i })) ?? [])
@@ -123,6 +125,8 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
       cliente: cliente.trim(),
       telefone: telefone || undefined,
       veiculo: veiculo.trim(),
+      placa: tipo === 'servico' ? placa.trim() || undefined : undefined,
+      km: tipo === 'servico' && km > 0 ? km : undefined,
       descricao: tipo !== 'venda' ? descricao.trim() || undefined : undefined,
       itens: itens.filter((i) => i.quantidade > 0),
       maoDeObra: mao,
@@ -184,6 +188,16 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
         <Campo rotulo="Veículo">
           <input className={inputCls} maxLength={MAX_TEXTO} value={veiculo} onChange={(e) => setVeiculo(e.target.value)} placeholder="Ex.: Gol G5 2012 prata" />
         </Campo>
+        {tipo === 'servico' && (
+          <>
+            <Campo rotulo="Placa">
+              <input className={`${inputCls} uppercase`} maxLength={8} value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} placeholder="Ex.: ABC1D23" />
+            </Campo>
+            <Campo rotulo="KM">
+              <input type="number" min={0} inputMode="numeric" className={inputCls} value={km || ''} onChange={(e) => setKm(Math.max(0, Math.round(+e.target.value)))} placeholder="Quilometragem do veículo" />
+            </Campo>
+          </>
+        )}
         <Campo rotulo="Data">
           <input type="date" className={inputCls} max={chaveDia(new Date())} value={data} onChange={(e) => { setData(e.target.value); setErro('') }} />
         </Campo>
