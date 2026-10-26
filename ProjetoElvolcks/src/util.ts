@@ -25,6 +25,42 @@ export const formatarTelefone = (s: string) => {
 }
 export const telefoneValido = (s: string) => /^\d{10,11}$/.test(s.replace(/\D/g, ''))
 
+/** Formata enquanto digita: CPF (000.000.000-00) até 11 dígitos, CNPJ (00.000.000/0000-00) acima disso */
+export const formatarCpfCnpj = (s: string) => {
+  const d = s.replace(/\D/g, '').slice(0, 14)
+  if (d.length <= 11) return d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+  return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2')
+}
+
+/** Confere os dígitos verificadores do CPF ou CNPJ */
+export const cpfCnpjValido = (s: string) => {
+  const d = s.replace(/\D/g, '')
+  if (d.length !== 11 && d.length !== 14) return false
+  if (/^(\d)\1+$/.test(d)) return false
+  const digito = (base: string, pesos: number[]) => {
+    const r = base.split('').reduce((t, n, i) => t + Number(n) * pesos[i], 0) % 11
+    return r < 2 ? 0 : 11 - r
+  }
+  if (d.length === 11) {
+    const p = [11, 10, 9, 8, 7, 6, 5, 4, 3, 2]
+    const d1 = digito(d.slice(0, 9), p.slice(1))
+    const d2 = digito(d.slice(0, 10), p)
+    return d.endsWith(`${d1}${d2}`)
+  }
+  const p = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  const d1 = digito(d.slice(0, 12), p.slice(1))
+  const d2 = digito(d.slice(0, 13), p)
+  return d.endsWith(`${d1}${d2}`)
+}
+
+/** Formata enquanto digita: 78000-000 */
+export const formatarCep = (s: string) => {
+  const d = s.replace(/\D/g, '').slice(0, 8)
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
+}
+
+export const emailValido = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)
+
 /** Para buscar sem diferenciar maiúscula nem acento */
 export const normalizar = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 

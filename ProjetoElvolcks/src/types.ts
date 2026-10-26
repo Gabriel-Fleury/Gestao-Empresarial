@@ -17,6 +17,11 @@ export interface Cliente {
   id: string
   nome: string
   telefone: string
+  /** Só dígitos formatados: 000.000.000-00 ou 00.000.000/0000-00 */
+  cpfCnpj?: string
+  cep?: string
+  endereco?: string
+  email?: string
 }
 
 export interface Produto {

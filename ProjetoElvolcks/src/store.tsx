@@ -6,7 +6,7 @@ import {
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { auth, criarConta, db, emailDoUsuario, mensagemErro } from './firebase'
 import type { Alteracao, Cliente, Colaborador, Funcao, Lancamento, MovEstoque, Produto, TipoMov } from './types'
-import { formatarTelefone, telefoneValido } from './util'
+import { cpfCnpjValido, emailValido, formatarCep, formatarCpfCnpj, formatarTelefone, telefoneValido } from './util'
 
 export const AVISO_ADMIN = 'Apenas administradores podem ver/fazer isso'
 
@@ -313,9 +313,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!telefoneValido(telefone)) return 'Informe o telefone com DDD, ex.: (66) 99956-0726.'
     const mesmo = clientes.find((c) => c.id !== id && c.telefone === telefone)
     if (mesmo) return `Esse telefone já está cadastrado para ${mesmo.nome}.`
+    const cpfCnpj = formatarCpfCnpj(d.cpfCnpj ?? '')
+    const cep = formatarCep(d.cep ?? '')
+    const endereco = (d.endereco ?? '').trim()
+    const email = (d.email ?? '').trim().toLowerCase()
+    if (cpfCnpj && !cpfCnpjValido(cpfCnpj)) return 'CPF/CNPJ inválido. Confira os números.'
+    const mesmoDoc = cpfCnpj && clientes.find((c) => c.id !== id && c.cpfCnpj === cpfCnpj)
+    if (mesmoDoc) return `Esse CPF/CNPJ já está cadastrado para ${mesmoDoc.nome}.`
+    if (cep && cep.length !== 9) return 'CEP incompleto, ex.: 78000-000.'
+    if (email && !emailValido(email)) return 'E-mail inválido.'
+    const opcionais = { cpfCnpj, cep, endereco, email }
     try {
-      if (id === null) await addDoc(collection(db, 'clientes'), { nome, telefone })
-      else await updateDoc(doc(db, 'clientes', id), { nome, telefone })
+      if (id === null) {
+        const preenchidos = Object.fromEntries(Object.entries(opcionais).filter(([, v]) => v))
+        await addDoc(collection(db, 'clientes'), { nome, telefone, ...preenchidos })
+      } else {
+        // Campo apagado no formulário é removido do documento
+        const campos = Object.fromEntries(Object.entries(opcionais).map(([k, v]) => [k, v || deleteField()]))
+        await updateDoc(doc(db, 'clientes', id), { nome, telefone, ...campos })
+      }
     } catch (e) {
       return mensagemErro(e)
     }
