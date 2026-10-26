@@ -11,6 +11,7 @@ interface Pag {
   forma: Forma
   valor: number
   parcelas: number
+  vencimento: string
 }
 
 export function NovoLancamento({ aoFechar, tipoInicial = 'venda', origem }: { aoFechar: () => void; tipoInicial?: TipoLanc; origem?: Lancamento }) {
@@ -65,7 +66,7 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
   const [instaladorId, setInstaladorId] = useState<string>('')
   const [comissaoPct, setComissaoPct] = useState(50)
   const [desconto, setDesconto] = useState(origem?.desconto ?? 0)
-  const [pags, setPags] = useState<Pag[]>([{ forma: 'PIX', valor: 0, parcelas: 2 }])
+  const [pags, setPags] = useState<Pag[]>([{ forma: 'PIX', valor: 0, parcelas: 2, vencimento: '' }])
   const [nfEmitida, setNfEmitida] = useState(false)
   const [nfNumero, setNfNumero] = useState('')
   const [busca, setBusca] = useState('')
@@ -109,6 +110,10 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
     if (tipo === 'servico' && !instaladorId) return setErro('Escolha o instalador.')
     if (desconto > pecas + mao) return setErro('O desconto é maior que o total.')
     if (tipo !== 'orcamento' && pagamentos.some((p) => p.valor <= 0)) return setErro('Confira os valores do pagamento.')
+    const prazos = tipo === 'orcamento' ? [] : pagamentos.filter((p) => p.forma === 'A prazo')
+    if (prazos.length > 1) return setErro('Use "A prazo" em só uma das formas de pagamento.')
+    if (prazos.some((p) => !p.vencimento)) return setErro('Escolha a data em que o cliente vai pagar.')
+    if (prazos.some((p) => p.vencimento < chaveDia(new Date()))) return setErro('A data do pagamento a prazo não pode ser antes de hoje.')
     if (telefone && !telefoneValido(telefone)) return setErro('Confira o telefone (com DDD) ou deixe em branco.')
     const hoje = chaveDia(new Date())
     if (!data || data > hoje) return setErro('A data não pode ser depois de hoje.')
@@ -133,7 +138,7 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
       instaladorId: tipo === 'servico' ? instaladorId : undefined,
       comissaoPct: tipo === 'servico' ? comissaoPct : 0,
       desconto,
-      pagamentos: tipo === 'orcamento' ? [] : pagamentos.map((p) => ({ forma: p.forma, valor: p.valor, parcelas: p.forma === 'Crédito parcelado' ? p.parcelas : undefined })),
+      pagamentos: tipo === 'orcamento' ? [] : pagamentos.map((p) => ({ forma: p.forma, valor: p.valor, parcelas: p.forma === 'Crédito parcelado' ? p.parcelas : undefined, vencimento: p.forma === 'A prazo' ? p.vencimento : undefined })),
       nfEmitida: tipo !== 'orcamento' && nfEmitida,
       nfNumero: nfEmitida ? nfNumero : undefined,
       origemId: origem?.id,
@@ -142,7 +147,8 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
       setSalvando(false)
       return setErro(`Não foi possível salvar: ${mensagemErro(e)}`)
     }
-    avisar(`${NOME_TIPO[tipo]} ${codigo(novo)} lançado${tipo === 'orcamento' ? '' : ' — estoque e caixa atualizados'}`)
+    const aPrazo = novo.pagamentos.some((p) => p.forma === 'A prazo')
+    avisar(`${NOME_TIPO[tipo]} ${codigo(novo)} lançado${tipo === 'orcamento' ? '' : aPrazo ? ' — estoque atualizado; o valor a prazo entra no caixa quando for pago' : ' — estoque e caixa atualizados'}`)
     aoFechar()
   }
 
@@ -332,7 +338,7 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Pagamento</span>
             {pags.length === 1 ? (
-              <button className="text-sm font-semibold text-blue-700 hover:underline" onClick={() => setPags((p) => [{ ...p[0], valor: Math.round(total / 2) }, { forma: p[0].forma === 'PIX' ? 'Dinheiro' : 'PIX', valor: 0, parcelas: 2 }])}>
+              <button className="text-sm font-semibold text-blue-700 hover:underline" onClick={() => setPags((p) => [{ ...p[0], valor: Math.round(total / 2) }, { forma: p[0].forma === 'PIX' ? 'Dinheiro' : 'PIX', valor: 0, parcelas: 2, vencimento: '' }])}>
                 + Segunda forma
               </button>
             ) : (
@@ -341,7 +347,7 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
           </div>
           <div className="space-y-3">
             {pagamentos.map((p, k) => (
-              <div key={k} className="grid gap-2 sm:grid-cols-[1fr_9rem_8rem]">
+              <div key={k} className="grid gap-2 sm:grid-cols-[1fr_9rem_10rem]">
                 <select className={inputCls} value={p.forma} onChange={(e) => setPags((ps) => ps.map((x, j) => (j === k ? { ...x, forma: e.target.value as Forma } : x)))}>
                   {FORMAS.map((f) => <option key={f}>{f}</option>)}
                 </select>
@@ -357,10 +363,22 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
                       <option key={n} value={n}>{n}x de {dinheiro(p.valor / n)}</option>
                     ))}
                   </select>
+                ) : p.forma === 'A prazo' ? (
+                  <input
+                    type="date"
+                    title="Data em que o cliente vai pagar"
+                    className={`${inputCls} ${!p.vencimento ? 'border-amber-400 bg-amber-50' : ''}`}
+                    min={chaveDia(new Date())}
+                    value={p.vencimento}
+                    onChange={(e) => { setPags((ps) => ps.map((x, j) => (j === k ? { ...x, vencimento: e.target.value } : x))); setErro('') }}
+                  />
                 ) : <span />}
               </div>
             ))}
           </div>
+          {pagamentos.some((p) => p.forma === 'A prazo') && (
+            <p className="mt-2 text-xs text-amber-700">A prazo: escolha ao lado a data combinada. O valor só entra no caixa quando o pagamento for confirmado.</p>
+          )}
         </div>
       )}
 

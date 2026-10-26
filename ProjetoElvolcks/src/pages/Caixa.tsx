@@ -2,18 +2,20 @@ import { useState } from 'react'
 import { inputCls, Painel, Selo, Titulo, Vazio } from '../components/ui'
 import { Detalhe } from '../components/Detalhe'
 import { codigo, useStore } from '../store'
-import { FORMAS } from '../types'
-import { chaveDia, dinheiro, hora, NOME_TIPO, totalLanc } from '../util'
+import { FORMAS_CAIXA } from '../types'
+import { chaveDia, dinheiro, hora, NOME_TIPO, pagamentoPrazo, recebidoNoDia, totalLanc } from '../util'
 
 export function Caixa() {
   const { lancamentos, colaborador } = useStore()
   const hoje = chaveDia(new Date())
   const [dia, setDia] = useState(hoje)
   const [aberto, setAberto] = useState<string | null>(null)
-  const doDia = lancamentos.filter((l) => l.tipo !== 'orcamento' && chaveDia(l.criadoEm) === dia)
+  // Lançados no dia + vendas/serviços a prazo que foram pagos no dia
+  const doDia = lancamentos.filter((l) => l.tipo !== 'orcamento' && (chaveDia(l.criadoEm) === dia || recebidoNoDia(l, dia).length > 0))
+  const recebido = (l: (typeof doDia)[number]) => recebidoNoDia(l, dia).reduce((s, p) => s + p.valor, 0)
   const validos = doDia.filter((l) => l.situacao !== 'cancelado')
-  const total = validos.reduce((s, l) => s + totalLanc(l), 0)
-  const porForma = FORMAS.map((f) => ({ f, v: validos.flatMap((l) => l.pagamentos).filter((p) => p.forma === f).reduce((s, p) => s + p.valor, 0) }))
+  const total = validos.reduce((s, l) => s + recebido(l), 0)
+  const porForma = FORMAS_CAIXA.map((f) => ({ f, v: validos.flatMap((l) => recebidoNoDia(l, dia)).filter((p) => p.forma === f).reduce((s, p) => s + p.valor, 0) }))
 
   return (
     <>
@@ -50,7 +52,11 @@ export function Caixa() {
                     <span className="min-w-0 flex-1 truncate">{l.cliente} <span className="text-slate-500">· {NOME_TIPO[l.tipo]} · {colaborador(l.criadoPor)?.nome.split(' ')[0]}</span></span>
                     <span className="text-xs text-slate-500">{l.pagamentos.map((p) => p.forma + (p.parcelas ? ` ${p.parcelas}x` : '')).join(' + ')}</span>
                     {l.situacao === 'cancelado' && <Selo cor="vermelho">Cancelado</Selo>}
-                    <span className={`w-24 text-right tabular-nums ${l.situacao === 'cancelado' ? 'text-slate-400 line-through' : 'text-emerald-700'}`}>{dinheiro(totalLanc(l))}</span>
+                    {l.situacao !== 'cancelado' && chaveDia(l.criadoEm) !== dia && <Selo cor="verde">Recebido a prazo</Selo>}
+                    {l.situacao !== 'cancelado' && chaveDia(l.criadoEm) === dia && pagamentoPrazo(l) && (!pagamentoPrazo(l)!.pagoEm || chaveDia(pagamentoPrazo(l)!.pagoEm!) !== dia) && (
+                      <Selo cor="ambar">{dinheiro(pagamentoPrazo(l)!.valor)} a prazo</Selo>
+                    )}
+                    <span className={`w-24 text-right tabular-nums ${l.situacao === 'cancelado' ? 'text-slate-400 line-through' : 'text-emerald-700'}`}>{dinheiro(l.situacao === 'cancelado' ? totalLanc(l) : recebido(l))}</span>
                   </button>
                 </li>
               ))}

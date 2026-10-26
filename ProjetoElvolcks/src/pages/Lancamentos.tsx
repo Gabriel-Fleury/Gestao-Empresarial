@@ -3,7 +3,7 @@ import { Detalhe } from '../components/Detalhe'
 import { Botao, inputCls, Painel, SeloSituacao, Titulo, Vazio } from '../components/ui'
 import { codigo, useStore } from '../store'
 import type { TipoLanc } from '../types'
-import { chaveDia, chaveMes, dataHora, dinheiro, ehHoje, orcamentoVencido, totalLanc } from '../util'
+import { chaveDia, chaveMes, dataHora, dinheiro, ehHoje, orcamentoVencido, pagamentoAtrasado, pagamentoPendente, pagamentoPrazo, totalLanc } from '../util'
 
 const TITULOS: Record<TipoLanc, string> = { venda: 'Vendas', orcamento: 'Orçamentos', servico: 'Serviços realizados' }
 type Periodo = 'hoje' | '7' | 'mes' | 'tudo'
@@ -20,6 +20,8 @@ export function Lancamentos({ tipo, novoLancamento }: { tipo: TipoLanc; novoLanc
     const seteDias = chaveDia(new Date(Date.now() - 6 * 864e5))
     return lancamentos.filter((l) => {
       if (l.tipo !== tipo) return false
+      // Pendentes aparecem em qualquer período: o filtro de data não pode esconder dinheiro a receber
+      if (situacao === 'pendente') return pagamentoPendente(l) && (!b || `${l.cliente} ${l.telefone ?? ''} ${l.veiculo} ${l.placa ?? ''} ${codigo(l)}`.toLowerCase().includes(b))
       if (periodo === 'hoje' && !ehHoje(l.criadoEm)) return false
       if (periodo === '7' && chaveDia(l.criadoEm) < seteDias) return false
       if (periodo === 'mes' && chaveMes(l.criadoEm) !== chaveMes(new Date())) return false
@@ -32,10 +34,25 @@ export function Lancamentos({ tipo, novoLancamento }: { tipo: TipoLanc; novoLanc
   }, [lancamentos, tipo, busca, periodo, situacao])
 
   const soma = lista.filter((l) => l.situacao !== 'cancelado').reduce((s, l) => s + totalLanc(l), 0)
+  const pendentes = tipo === 'orcamento' ? [] : lancamentos.filter((l) => l.tipo === tipo && pagamentoPendente(l))
+  const aReceber = pendentes.reduce((s, l) => s + (pagamentoPrazo(l)?.valor ?? 0), 0)
 
   return (
     <>
       <Titulo acao={<Botao onClick={() => novoLancamento(tipo)}>+ {tipo === 'orcamento' ? 'Novo orçamento' : tipo === 'venda' ? 'Nova venda' : 'Novo serviço'}</Botao>}>{TITULOS[tipo]}</Titulo>
+
+      {pendentes.length > 0 && situacao !== 'pendente' && (
+        <button
+          onClick={() => setSituacao('pendente')}
+          className={`mb-3 flex w-full items-center justify-between gap-3 rounded-xl border-2 px-4 py-3 text-left text-sm ${pendentes.some(pagamentoAtrasado) ? 'border-red-400 bg-red-50 text-red-900' : 'border-amber-400 bg-amber-50 text-amber-900'}`}
+        >
+          <span>
+            <b>{pendentes.length} {pendentes.length === 1 ? 'pagamento a prazo pendente' : 'pagamentos a prazo pendentes'}</b>
+            {pendentes.some(pagamentoAtrasado) && <> · {pendentes.filter(pagamentoAtrasado).length} atrasado(s)</>}
+          </span>
+          <span className="whitespace-nowrap">A receber: <b className="tabular-nums">{dinheiro(aReceber)}</b> · Ver →</span>
+        </button>
+      )}
 
       <div className="mb-3 flex flex-wrap gap-2">
         <input className={`${inputCls} max-w-xs`} placeholder={`Buscar cliente, telefone, veículo${tipo === 'servico' ? ', placa' : ''} ou número…`} value={busca} onChange={(e) => setBusca(e.target.value)} />
@@ -53,7 +70,12 @@ export function Lancamentos({ tipo, novoLancamento }: { tipo: TipoLanc; novoLanc
               <option value="convertido">Convertidos</option>
               <option value="vencido">Vencidos</option>
             </>
-          ) : <option value="ativo">Concluídos</option>}
+          ) : (
+            <>
+              <option value="ativo">Concluídos</option>
+              <option value="pendente">A receber (a prazo)</option>
+            </>
+          )}
           <option value="cancelado">Cancelados</option>
         </select>
       </div>
@@ -75,7 +97,11 @@ export function Lancamentos({ tipo, novoLancamento }: { tipo: TipoLanc; novoLanc
             </thead>
             <tbody>
               {lista.slice(0, 200).map((l) => (
-                <tr key={l.id} onClick={() => setAberto(l.id)} className="cursor-pointer border-b border-slate-100 hover:bg-blue-50/40">
+                <tr
+                  key={l.id}
+                  onClick={() => setAberto(l.id)}
+                  className={`cursor-pointer border-b border-slate-100 ${pagamentoAtrasado(l) ? 'border-l-4 border-l-red-500 bg-red-50 hover:bg-red-100/70' : pagamentoPendente(l) ? 'border-l-4 border-l-amber-400 bg-amber-50 hover:bg-amber-100/70' : 'hover:bg-blue-50/40'}`}
+                >
                   <td className="px-4 py-2.5 font-mono text-xs font-semibold text-blue-800">{codigo(l)}</td>
                   <td className="px-3 py-2.5 whitespace-nowrap text-slate-600">{dataHora(l.criadoEm)}</td>
                   <td className="px-3 py-2.5 font-medium">{l.cliente}</td>

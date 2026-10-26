@@ -107,7 +107,32 @@ export const ultimosMeses = (n: number) =>
 /** Lançamentos que entram no caixa: vendas e serviço não cancelados. */
 export const entraNoCaixa = (l: Lancamento) => l.tipo !== 'orcamento' && l.situacao !== 'cancelado'
 
-export const subtotalPecas = (l: Pick<Lancamento, 'itens'>) => l.itens.reduce((s, i) => s + i.quantidade * i.preco, 0)
+/** Pagamento "A prazo" do lançamento, se houver */
+export const pagamentoPrazo = (l: Pick<Lancamento, 'pagamentos'>) => l.pagamentos.find((p) => p.forma === 'A prazo')
+
+/** Venda/serviço a prazo que o cliente ainda não pagou */
+export const pagamentoPendente = (l: Lancamento) => l.situacao !== 'cancelado' && !!pagamentoPrazo(l) && !pagamentoPrazo(l)!.pagoEm
+
+/** Pendente e já passou do dia combinado */
+export const pagamentoAtrasado = (l: Lancamento) => pagamentoPendente(l) && (pagamentoPrazo(l)!.vencimento ?? '') < chaveDia(new Date())
+
+/** Data AAAA-MM-DD → dd/mm/aaaa, sem passar pelo fuso */
+export const dataDia = (chave: string) => chave.split('-').reverse().join('/')
+
+/**
+ * O que entrou no caixa num dia: à vista no dia do lançamento;
+ * a prazo só no dia em que o pagamento foi confirmado, pela forma recebida.
+ */
+export const recebidoNoDia = (l: Lancamento, dia: string) =>
+  !entraNoCaixa(l)
+    ? []
+    : l.pagamentos.flatMap((p) =>
+        p.forma === 'A prazo'
+          ? p.pagoEm && chaveDia(p.pagoEm) === dia ? [{ forma: p.recebidoCom ?? 'Dinheiro', valor: p.valor }] : []
+          : chaveDia(l.criadoEm) === dia ? [{ forma: p.forma, valor: p.valor }] : [],
+      )
+
+export const subtotalPecas =(l: Pick<Lancamento, 'itens'>) => l.itens.reduce((s, i) => s + i.quantidade * i.preco, 0)
 
 export const comissao = (l: Lancamento) => (l.maoDeObra * l.comissaoPct) / 100
 

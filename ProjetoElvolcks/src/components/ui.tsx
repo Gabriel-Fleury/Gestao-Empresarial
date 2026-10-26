@@ -1,5 +1,5 @@
 import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
-import { orcamentoVencido } from '../util'
+import { dataDia, orcamentoVencido, pagamentoAtrasado, pagamentoPendente, pagamentoPrazo } from '../util'
 import type { Lancamento } from '../types'
 
 export function Logo({ size = 64 }: { size?: number }) {
@@ -74,6 +74,8 @@ const CORES_SELO = {
   vermelho: 'bg-red-50 text-red-700 ring-red-200',
   cinza: 'bg-slate-100 text-slate-600 ring-slate-200',
   ambar: 'bg-amber-50 text-amber-800 ring-amber-200',
+  ambarForte: 'bg-amber-400 text-amber-950 ring-amber-500',
+  vermelhoForte: 'bg-red-600 text-white ring-red-700',
 }
 export function Selo({ cor = 'cinza', children }: { cor?: keyof typeof CORES_SELO; children: ReactNode }) {
   return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset whitespace-nowrap ${CORES_SELO[cor]}`}>{children}</span>
@@ -84,6 +86,12 @@ export function SeloSituacao({ l }: { l: Lancamento }) {
   if (l.situacao === 'convertido') return <Selo cor="azul">Convertido</Selo>
   if (orcamentoVencido(l)) return <Selo cor="cinza">Vencido</Selo>
   if (l.tipo === 'orcamento') return <Selo cor="ambar">Aberto</Selo>
+  if (pagamentoPendente(l)) {
+    const venc = pagamentoPrazo(l)!.vencimento
+    return pagamentoAtrasado(l)
+      ? <Selo cor="vermelhoForte">⚠ Pagamento atrasado{venc ? ` · ${dataDia(venc)}` : ''}</Selo>
+      : <Selo cor="ambarForte">⏳ A receber{venc ? ` · ${dataDia(venc)}` : ''}</Selo>
+  }
   return <Selo cor="verde">Concluído</Selo>
 }
 

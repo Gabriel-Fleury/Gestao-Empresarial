@@ -50,9 +50,12 @@ export interface MovEstoque {
 
 export type TipoLanc = 'orcamento' | 'venda' | 'servico'
 
-export type Forma = 'PIX' | 'Dinheiro' | 'Débito' | 'Crédito à vista' | 'Crédito parcelado'
+export type Forma = 'PIX' | 'Dinheiro' | 'Débito' | 'Crédito à vista' | 'Crédito parcelado' | 'A prazo'
 
-export const FORMAS: Forma[] = ['PIX', 'Dinheiro', 'Débito', 'Crédito à vista', 'Crédito parcelado']
+export const FORMAS: Forma[] = ['PIX', 'Dinheiro', 'Débito', 'Crédito à vista', 'Crédito parcelado', 'A prazo']
+
+/** Formas com que o dinheiro entra de fato no caixa (inclusive ao quitar um "A prazo") */
+export const FORMAS_CAIXA = FORMAS.filter((f) => f !== 'A prazo')
 
 export interface Item {
   produtoId: string
@@ -64,6 +67,14 @@ export interface Pagamento {
   forma: Forma
   valor: number
   parcelas?: number
+  /** A prazo: dia combinado para o pagamento (AAAA-MM-DD) */
+  vencimento?: string
+  /** A prazo: quando foi confirmado o pagamento */
+  pagoEm?: string
+  /** A prazo: forma com que o cliente pagou */
+  recebidoCom?: Forma
+  /** A prazo: quem confirmou o pagamento */
+  recebidoPor?: string
 }
 
 export type Situacao = 'ativo' | 'cancelado' | 'convertido'

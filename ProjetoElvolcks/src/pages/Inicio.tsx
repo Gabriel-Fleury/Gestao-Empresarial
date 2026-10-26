@@ -3,14 +3,15 @@ import { BuscaPecas } from '../components/BuscaPecas'
 import { Detalhe } from '../components/Detalhe'
 import { Cadeado, Painel, Selo, SeloSituacao, Titulo, Vazio } from '../components/ui'
 import { codigo, useStore } from '../store'
-import { dinheiro, ehHoje, entraNoCaixa, hora, NOME_TIPO, qtd, totalLanc } from '../util'
+import { chaveDia, dinheiro, ehHoje, entraNoCaixa, hora, NOME_TIPO, qtd, recebidoNoDia, totalLanc } from '../util'
 import type { Pagina } from '../App'
 
 export function Inicio({ novoLancamento, ir }: { novoLancamento: () => void; ir: (p: Pagina) => void }) {
   const { lancamentos, produtos, isAdmin, avisoAdmin, usuario, colaborador } = useStore()
   const [aberto, setAberto] = useState<string | null>(null)
   const deHoje = lancamentos.filter((l) => ehHoje(l.criadoEm))
-  const caixaHoje = deHoje.filter(entraNoCaixa).reduce((s, l) => s + totalLanc(l), 0)
+  // À vista lançado hoje + a prazo pago hoje
+  const caixaHoje = lancamentos.flatMap((l) => recebidoNoDia(l, chaveDia(new Date()))).reduce((s, p) => s + p.valor, 0)
   const servicosHoje = deHoje.filter((l) => l.tipo === 'servico' && l.situacao !== 'cancelado').length
   const orcHoje = deHoje.filter((l) => l.tipo === 'orcamento').length
   const baixo = produtos.filter((p) => p.quantidade <= 1).sort((a, b) => a.quantidade - b.quantidade)

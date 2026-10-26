@@ -1,16 +1,17 @@
 import { useRef, useState, type Ref } from 'react'
 import { createPortal } from 'react-dom'
 import { codigo, useStore } from '../store'
-import type { Lancamento } from '../types'
+import { FORMAS_CAIXA, type Forma, type Lancamento } from '../types'
 import { baixarPdf } from '../pdf'
-import { comissao, dataCurta, dataHora, dinheiro, formatarTelefone, LOJA, NOME_TIPO, orcamentoVencido, qtd, subtotalPecas, telefoneValido, totalLanc, validadeOrcamento } from '../util'
+import { comissao, dataCurta, dataDia, dataHora, dinheiro, formatarTelefone, LOJA, NOME_TIPO, orcamentoVencido, pagamentoAtrasado, pagamentoPendente, pagamentoPrazo, qtd, subtotalPecas, telefoneValido, totalLanc, validadeOrcamento } from '../util'
 import { NovoLancamento } from './NovoLancamento'
 import { Botao, Cadeado, Campo, InputDinheiro, inputCls, Logo, MAX_DESCRICAO, MAX_TEXTO, Modal, SeloSituacao } from './ui'
 
 export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) {
-  const { lancamentos, alteracoes, colaborador, produto, isAdmin, avisoAdmin, cancelar, editar, avisar } = useStore()
+  const { lancamentos, alteracoes, colaborador, produto, isAdmin, avisoAdmin, cancelar, editar, confirmarPagamento, avisar } = useStore()
   const l = lancamentos.find((x) => x.id === id)
-  const [modo, setModo] = useState<'ver' | 'editar' | 'cancelar' | 'converter'>('ver')
+  const [modo, setModo] = useState<'ver' | 'editar' | 'cancelar' | 'converter' | 'receber'>('ver')
+  const [recebidoCom, setRecebidoCom] = useState<Forma>('PIX')
   const [ed, setEd] = useState(() => ({ cliente: l?.cliente ?? '', telefone: l?.telefone ?? '', veiculo: l?.veiculo ?? '', placa: l?.placa ?? '', km: l?.km ?? 0, descricao: l?.descricao ?? '', desconto: l?.desconto ?? 0, nfEmitida: l?.nfEmitida ?? false, nfNumero: l?.nfNumero ?? '' }))
   const [erroEd, setErroEd] = useState('')
   const [gerando, setGerando] = useState(false)
@@ -21,6 +22,9 @@ export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) 
   const origem = l.origemId ? lancamentos.find((x) => x.id === l.origemId) : undefined
   const destino = l.convertidoEmId ? lancamentos.find((x) => x.id === l.convertidoEmId) : undefined
   const ativo = l.situacao === 'ativo'
+  const prazo = pagamentoPrazo(l)
+  const pendente = pagamentoPendente(l)
+  const atrasado = pagamentoAtrasado(l)
 
   if (modo === 'converter') return <NovoLancamento origem={l} aoFechar={aoFechar} />
 
@@ -100,7 +104,7 @@ export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) 
               <Info rotulo="Veículo" valor={l.veiculo || '—'} />
               {l.tipo === 'servico' && <Info rotulo="Placa" valor={l.placa || '—'} />}
               {l.tipo === 'servico' && <Info rotulo="KM" valor={l.km ? `${qtd(l.km)} km` : '—'} />}
-              <Info rotulo="Lançado em" valor={dataHora(l.criadoEm)} />
+              <Info rotulo={l.tipo === 'servico' ? 'Data do serviço' : l.tipo === 'venda' ? 'Data da venda' : 'Lançado em'} valor={dataHora(l.criadoEm)} />
               <Info rotulo="Lançado por" valor={colaborador(l.criadoPor)?.nome ?? '—'} />
               {l.tipo === 'servico' && <Info rotulo="Instalador" valor={colaborador(l.instaladorId)?.nome ?? '—'} />}
               {l.tipo === 'orcamento' && <Info rotulo="Válido até" valor={dataCurta(validadeOrcamento(l))} destaque={orcamentoVencido(l)} />}
@@ -118,13 +122,48 @@ export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) 
 
           <ItensTabela l={l} />
 
+          {prazo && l.situacao !== 'cancelado' && (
+            <div className={`rounded-xl border-2 p-3 ${atrasado ? 'border-red-400 bg-red-50' : pendente ? 'border-amber-400 bg-amber-50' : 'border-emerald-300 bg-emerald-50'}`}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className={`font-display text-base font-bold uppercase ${atrasado ? 'text-red-800' : pendente ? 'text-amber-900' : 'text-emerald-800'}`}>
+                    {atrasado ? '⚠ Pagamento atrasado' : pendente ? '⏳ Pagamento pendente' : '✓ Pago'}
+                  </div>
+                  <dl className="mt-1 grid grid-cols-2 gap-x-6 gap-y-1">
+                    <Info rotulo={l.tipo === 'servico' ? 'Serviço realizado em' : 'Venda feita em'} valor={dataCurta(l.criadoEm)} />
+                    <Info rotulo="Pagamento combinado para" valor={prazo.vencimento ? dataDia(prazo.vencimento) : '—'} destaque={atrasado} />
+                    <Info rotulo="Valor a prazo" valor={dinheiro(prazo.valor)} />
+                    {prazo.pagoEm && <Info rotulo="Pago em" valor={`${dataHora(prazo.pagoEm)} · ${prazo.recebidoCom ?? ''}`} />}
+                    {prazo.recebidoPor && <Info rotulo="Confirmado por" valor={colaborador(prazo.recebidoPor)?.nome ?? '—'} />}
+                  </dl>
+                </div>
+                {pendente && modo === 'ver' && (
+                  <Botao className="bg-emerald-700 hover:bg-emerald-800" onClick={restrito(() => setModo('receber'))}>{!isAdmin && <Cadeado />} Confirmar pagamento</Botao>
+                )}
+              </div>
+              {modo === 'receber' && (
+                <div className="mt-3 flex flex-wrap items-end justify-end gap-2 border-t border-amber-300 pt-3">
+                  <Campo rotulo="Como o cliente pagou?">
+                    <select className={inputCls} value={recebidoCom} onChange={(e) => setRecebidoCom(e.target.value as Forma)}>
+                      {FORMAS_CAIXA.map((f) => <option key={f}>{f}</option>)}
+                    </select>
+                  </Campo>
+                  <Botao variante="secundario" onClick={() => setModo('ver')}>Voltar</Botao>
+                  <Botao className="bg-emerald-700 hover:bg-emerald-800" onClick={() => { confirmarPagamento(l.id, recebidoCom); setModo('ver') }}>
+                    Confirmar {dinheiro(prazo.valor)} recebido hoje
+                  </Botao>
+                </div>
+              )}
+            </div>
+          )}
+
           {l.pagamentos.length > 0 && (
             <div>
               <h3 className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">Pagamento</h3>
               <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
                 {l.pagamentos.map((p, k) => (
                   <li key={k} className="flex justify-between px-3 py-2">
-                    <span>{p.forma}{p.parcelas ? ` · ${p.parcelas}x de ${dinheiro(p.valor / p.parcelas)}` : ''}</span>
+                    <span>{p.forma}{p.parcelas ? ` · ${p.parcelas}x de ${dinheiro(p.valor / p.parcelas)}` : ''}{p.vencimento ? ` · pagar até ${dataDia(p.vencimento)}${p.pagoEm ? ` (pago em ${dataCurta(p.pagoEm)})` : ''}` : ''}</span>
                     <span className="text-emerald-700 tabular-nums">{dinheiro(p.valor)}</span>
                   </li>
                 ))}
@@ -298,7 +337,7 @@ function DocumentoImpresso({ l, produtoNome, vendedor, instalador, ref }: { l: L
           <b>Pagamento</b>
           {l.pagamentos.map((p, k) => (
             <div key={k} className="flex justify-between border-b border-slate-300 py-1">
-              <span>{p.forma}{p.parcelas ? ` · ${p.parcelas}x de ${dinheiro(p.valor / p.parcelas)}` : ''}</span>
+              <span>{p.forma}{p.parcelas ? ` · ${p.parcelas}x de ${dinheiro(p.valor / p.parcelas)}` : ''}{p.vencimento ? ` · pagar até ${dataDia(p.vencimento)}${p.pagoEm ? ` (pago em ${dataCurta(p.pagoEm)})` : ''}` : ''}</span>
               <span>{dinheiro(p.valor)}</span>
             </div>
           ))}

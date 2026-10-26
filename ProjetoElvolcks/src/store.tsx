@@ -5,8 +5,8 @@ import {
 } from 'firebase/firestore'
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { auth, criarConta, db, emailDoUsuario, mensagemErro } from './firebase'
-import type { Alteracao, Cliente, Colaborador, Funcao, Lancamento, MovEstoque, Produto, TipoMov } from './types'
-import { cpfCnpjValido, emailValido, formatarCep, formatarCpfCnpj, formatarTelefone, telefoneValido } from './util'
+import type { Alteracao, Cliente, Colaborador, Forma, Funcao, Lancamento, MovEstoque, Produto, TipoMov } from './types'
+import { cpfCnpjValido, dinheiro, emailValido, formatarCep, formatarCpfCnpj, formatarTelefone, telefoneValido } from './util'
 
 export const AVISO_ADMIN = 'Apenas administradores podem ver/fazer isso'
 
@@ -48,6 +48,8 @@ interface Store {
   lancar: (dados: NovoLancamento) => Promise<Lancamento>
   cancelar: (id: string) => Promise<void>
   editar: (id: string, mudancas: Partial<Lancamento>, descricao: string) => Promise<void>
+  /** Marca o "A prazo" como pago hoje, pela forma recebida (entra no caixa do dia) */
+  confirmarPagamento: (id: string, forma: Forma) => Promise<void>
   movimentarEstoque: (produtoId: string, tipo: TipoMov, quantidade: number) => Promise<void>
   novoProduto: (nome: string, marca: string, custo: number, preco: number, quantidade: number) => Promise<void>
   /** Muda nome, marca e preços; `delta` ≠ 0 também corrige a quantidade (fica no histórico como correção) */
@@ -166,6 +168,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       await b.commit()
       avisar(`${codigo(l)} cancelado`)
+    } catch (e) {
+      falhou(e)
+    }
+  }
+
+  const confirmarPagamento = async (id: string, forma: Forma) => {
+    if (!isAdmin) return avisar(AVISO_ADMIN, 'erro')
+    const l = lancamentos.find((x) => x.id === id)
+    if (!l || l.situacao === 'cancelado') return
+    const pagoEm = new Date().toISOString()
+    const pagamentos = l.pagamentos.map((p) => (p.forma === 'A prazo' && !p.pagoEm ? { ...p, pagoEm, recebidoCom: forma, recebidoPor: usuario!.id } : p))
+    const prazo = l.pagamentos.find((p) => p.forma === 'A prazo')
+    const b = writeBatch(db)
+    b.update(doc(db, 'lancamentos', id), { pagamentos })
+    registrar(b, id, `Pagamento a prazo confirmado: ${dinheiro(prazo?.valor ?? 0)} recebido em ${forma}`)
+    try {
+      await b.commit()
+      avisar(`Pagamento de ${codigo(l)} confirmado — entrou no caixa de hoje`)
     } catch (e) {
       falhou(e)
     }
@@ -356,7 +376,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     estado, logado, usuario: usuario!, avisoLogin, isAdmin, entrar, sair: () => signOut(auth), trocarSenha, salvarPessoa, alternarAtivo,
     colaboradores: colaboradores ?? [], clientes, salvarCliente, produtos, lancamentos, movimentacoes, alteracoes, toast, avisar,
     avisoAdmin: () => avisar(AVISO_ADMIN, 'erro'),
-    lancar, cancelar, editar, movimentarEstoque, novoProduto, corrigirProduto,
+    lancar, cancelar, editar, confirmarPagamento, movimentarEstoque, novoProduto, corrigirProduto,
     produto: (id) => produtos.find((p) => p.id === id),
     colaborador: (id) => colaboradores?.find((c) => c.id === id),
   }
