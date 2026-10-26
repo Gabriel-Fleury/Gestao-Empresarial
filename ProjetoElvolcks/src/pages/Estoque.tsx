@@ -22,9 +22,41 @@ export function Estoque() {
 
   const lista = buscarProdutos(produtos, busca).filter((p) => !soBaixo || p.quantidade <= 1)
 
+  // Valor parado na prateleira (quantidade negativa não conta)
+  const emEstoque = produtos.filter((p) => p.quantidade > 0)
+  const valorCusto = emEstoque.reduce((s, p) => s + p.quantidade * (p.custo ?? 0), 0)
+  const valorVenda = emEstoque.reduce((s, p) => s + p.quantidade * p.preco, 0)
+  const semCusto = emEstoque.filter((p) => !p.custo).length
+  const unidades = emEstoque.reduce((s, p) => s + p.quantidade, 0)
+
   return (
     <>
       <Titulo acao={<Botao onClick={() => setNovo(true)}>+ Novo produto</Botao>}>Estoque</Titulo>
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <Painel>
+          <div className="p-4">
+            <div className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Mercadorias pelo preço de custo</div>
+            <div className="mt-1 font-display text-3xl font-bold text-slate-800 tabular-nums">{dinheiro(valorCusto)}</div>
+            <div className={`text-xs ${semCusto ? 'text-amber-700' : 'text-slate-500'}`}>
+              {semCusto ? `${semCusto} ${semCusto === 1 ? 'produto sem' : 'produtos sem'} preço de custo ${semCusto === 1 ? 'ficou' : 'ficaram'} de fora` : 'Quanto foi investido no que está na prateleira'}
+            </div>
+          </div>
+        </Painel>
+        <Painel>
+          <div className="p-4">
+            <div className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Mercadorias pelo preço de venda</div>
+            <div className="mt-1 font-display text-3xl font-bold text-emerald-700 tabular-nums">{dinheiro(valorVenda)}</div>
+            <div className="text-xs text-slate-500">Quanto entra se vender tudo</div>
+          </div>
+        </Painel>
+        <Painel>
+          <div className="p-4">
+            <div className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Itens em estoque</div>
+            <div className="mt-1 font-display text-3xl font-bold text-slate-800 tabular-nums">{qtd(unidades)}</div>
+            <div className="text-xs text-slate-500">{emEstoque.length} {emEstoque.length === 1 ? 'produto' : 'produtos'} com quantidade</div>
+          </div>
+        </Painel>
+      </div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="flex rounded-lg bg-slate-200/70 p-1">
           {(['produtos', 'historico'] as const).map((a) => (
