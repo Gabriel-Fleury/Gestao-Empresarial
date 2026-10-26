@@ -6,7 +6,7 @@ import {
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { auth, criarConta, db, emailDoUsuario, mensagemErro } from './firebase'
 import type { Alteracao, Cliente, Colaborador, Forma, Funcao, Lancamento, MovEstoque, Produto, TipoMov } from './types'
-import { cpfCnpjValido, dinheiro, emailValido, formatarCep, formatarCpfCnpj, formatarTelefone, telefoneValido } from './util'
+import { cpfCnpjValido, dinheiro, emailValido, formatarCep, formatarCpfCnpj, formatarTelefone, produtoComMesmoNome, telefoneValido } from './util'
 
 export const AVISO_ADMIN = 'Apenas administradores podem ver/fazer isso'
 
@@ -217,6 +217,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   const novoProduto = async (nome: string, marca: string, custo: number, preco: number, quantidade: number) => {
+    const igual = produtoComMesmoNome(produtos, nome)
+    if (igual) return avisar(`Já existe um produto com esse nome: ${igual.nome}${igual.codigo ? ` (código ${igual.codigo})` : ''}`, 'erro')
     const ref = doc(collection(db, 'produtos'))
     try {
       // Transação: o código do produto (1, 2, 3…) nunca se repete
@@ -237,6 +239,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   const corrigirProduto = async (id: string, d: Pick<Produto, 'nome' | 'marca' | 'custo' | 'preco'>, delta: number) => {
+    const igual = produtoComMesmoNome(produtos, d.nome, id)
+    if (igual) {
+      avisar(`Já existe um produto com esse nome: ${igual.nome}${igual.codigo ? ` (código ${igual.codigo})` : ''}`, 'erro')
+      return false
+    }
     const b = writeBatch(db)
     b.update(doc(db, 'produtos', id), { nome: d.nome, marca: d.marca || deleteField(), custo: d.custo || deleteField(), preco: d.preco })
     if (delta) escreverEstoque(b, [{ produtoId: id, quantidade: Math.abs(delta) }], 'ajuste', delta < 0 ? -1 : 1)

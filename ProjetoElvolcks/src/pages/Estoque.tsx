@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Botao, Campo, inputCls, Modal, Painel, Selo, Titulo, Vazio } from '../components/ui'
 import { useStore } from '../store'
 import type { Produto, TipoMov } from '../types'
-import { buscarProdutos, dataHora, dinheiro, qtd } from '../util'
+import { buscarProdutos, dataHora, dinheiro, produtoComMesmoNome, qtd } from '../util'
 
 const NOME_MOV: Record<TipoMov, { t: string; cor: 'verde' | 'azul' | 'cinza' | 'ambar' | 'vermelho' }> = {
   entrada: { t: 'Entrada', cor: 'verde' },
@@ -122,12 +122,13 @@ function MexerEstoque({ p, tipo, aoFechar }: { p: Produto; tipo: 'entrada' | 'aj
 }
 
 function CorrigirProduto({ p, aoFechar }: { p: Produto; aoFechar: () => void }) {
-  const { corrigirProduto, avisar } = useStore()
+  const { corrigirProduto, avisar, produtos } = useStore()
   const [nome, setNome] = useState(p.nome)
   const [marca, setMarca] = useState(p.marca ?? '')
   const [custo, setCusto] = useState(p.custo ?? 0)
   const [preco, setPreco] = useState(p.preco)
   const [quantidade, setQuantidade] = useState(p.quantidade)
+  const repetido = produtoComMesmoNome(produtos, nome, p.id)
   const salvar = async () => {
     const delta = +(quantidade - p.quantidade).toFixed(2)
     const dados = { nome: nome.trim(), marca: marca.trim(), custo, preco }
@@ -142,6 +143,11 @@ function CorrigirProduto({ p, aoFechar }: { p: Produto; aoFechar: () => void }) 
       {p.codigo && <p className="mb-3 text-sm text-slate-500">Código {p.codigo}</p>}
       <div className="space-y-3">
         <Campo rotulo="Nome"><input autoFocus className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} /></Campo>
+        {repetido && (
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            Já existe um produto com esse nome: <b>{repetido.nome}</b>{repetido.codigo ? ` (código ${repetido.codigo})` : ''}.
+          </p>
+        )}
         <Campo rotulo="Marca"><input className={inputCls} value={marca} onChange={(e) => setMarca(e.target.value)} /></Campo>
         <div className="grid grid-cols-2 gap-3">
           <Campo rotulo="Preço de custo (R$)"><input type="number" step="0.01" className={inputCls} value={custo || ''} onChange={(e) => setCusto(+e.target.value)} /></Campo>
@@ -152,23 +158,29 @@ function CorrigirProduto({ p, aoFechar }: { p: Produto; aoFechar: () => void }) 
       <p className="mt-2 text-xs text-slate-500">Mudança de quantidade fica registrada no histórico com seu nome, data e hora. O novo preço vale para os próximos lançamentos.</p>
       <div className="mt-4 flex justify-end gap-2">
         <Botao variante="secundario" onClick={aoFechar}>Cancelar</Botao>
-        <Botao disabled={!nome.trim() || preco <= 0} onClick={salvar}>Salvar</Botao>
+        <Botao disabled={!nome.trim() || preco <= 0 || !!repetido} onClick={salvar}>Salvar</Botao>
       </div>
     </Modal>
   )
 }
 
 function NovoProduto({ aoFechar }: { aoFechar: () => void }) {
-  const { novoProduto } = useStore()
+  const { novoProduto, produtos } = useStore()
   const [nome, setNome] = useState('')
   const [marca, setMarca] = useState('')
   const [custo, setCusto] = useState(0)
   const [preco, setPreco] = useState(0)
   const [quantidade, setQuantidade] = useState(0)
+  const repetido = produtoComMesmoNome(produtos, nome)
   return (
     <Modal aberto aoFechar={aoFechar} titulo="Novo produto" largura="max-w-md">
       <div className="space-y-3">
         <Campo rotulo="Nome"><input autoFocus className={inputCls} value={nome} onChange={(e) => setNome(e.target.value)} /></Campo>
+        {repetido && (
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            Já existe um produto com esse nome: <b>{repetido.nome}</b>{repetido.codigo ? ` (código ${repetido.codigo})` : ''}.
+          </p>
+        )}
         <Campo rotulo="Marca"><input className={inputCls} value={marca} onChange={(e) => setMarca(e.target.value)} /></Campo>
         <div className="grid grid-cols-2 gap-3">
           <Campo rotulo="Preço de custo (R$)"><input type="number" step="0.01" className={inputCls} value={custo || ''} onChange={(e) => setCusto(+e.target.value)} /></Campo>
@@ -179,7 +191,7 @@ function NovoProduto({ aoFechar }: { aoFechar: () => void }) {
       <p className="mt-2 text-xs text-slate-500">O código do produto é gerado automaticamente ao cadastrar.</p>
       <div className="mt-4 flex justify-end gap-2">
         <Botao variante="secundario" onClick={aoFechar}>Cancelar</Botao>
-        <Botao disabled={!nome.trim() || preco <= 0} onClick={() => { novoProduto(nome.trim(), marca.trim(), custo, preco, quantidade); aoFechar() }}>Cadastrar</Botao>
+        <Botao disabled={!nome.trim() || preco <= 0 || !!repetido} onClick={() => { novoProduto(nome.trim(), marca.trim(), custo, preco, quantidade); aoFechar() }}>Cadastrar</Botao>
       </div>
     </Modal>
   )

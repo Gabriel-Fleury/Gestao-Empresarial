@@ -64,6 +64,12 @@ export const emailValido = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)
 /** Para buscar sem diferenciar maiúscula nem acento */
 export const normalizar = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 
+/** Outro produto com o mesmo nome (sem diferenciar mai\u00fascula, acento nem espa\u00e7os a mais) */
+export const produtoComMesmoNome = (produtos: Produto[], nome: string, ignorarId?: string) => {
+  const n = normalizar(nome).replace(/\s+/g, ' ')
+  return n ? produtos.find((p) => p.id !== ignorarId && normalizar(p.nome).replace(/\s+/g, ' ') === n) : undefined
+}
+
 /** Busca por c\u00f3digo, nome ou marca ("12", "modulo bosch"\u2026); o produto com o c\u00f3digo exato vem primeiro */
 export const buscarProdutos = (produtos: Produto[], busca: string) => {
   const termos = normalizar(busca).split(/\s+/).filter(Boolean)
