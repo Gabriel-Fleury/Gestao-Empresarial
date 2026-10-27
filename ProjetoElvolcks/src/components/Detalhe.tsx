@@ -279,10 +279,10 @@ function DocumentoImpresso({ l, produtoNome, vendedor, instalador, ref }: { l: L
       <header className="flex items-center gap-5 border-b-2 border-black pb-4">
         <Logo size={96} />
         <div className="flex-1">
-          <div className="font-marca text-3xl font-bold uppercase">{LOJA.nome}</div>
+          <div className="font-marca text-2xl leading-tight font-bold uppercase">{LOJA.nome}</div>
           <div>{LOJA.razaoSocial} · {LOJA.cnpj}</div>
           <div>{LOJA.endereco} · {LOJA.cep}</div>
-          <div>WhatsApp {LOJA.whatsapp}</div>
+          <div>WhatsApp {LOJA.whatsapp} · Telefone {LOJA.telefone}</div>
         </div>
         <div className="text-right">
           <div className="font-display text-2xl font-bold uppercase">{NOME_TIPO[l.tipo]}</div>
