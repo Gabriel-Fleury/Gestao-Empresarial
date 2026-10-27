@@ -3,30 +3,7 @@ import { dataDia, orcamentoVencido, pagamentoAtrasado, pagamentoPendente, pagame
 import type { Lancamento } from '../types'
 
 export function Logo({ size = 64 }: { size?: number }) {
-  const [falhou, setFalhou] = useState(false)
-  if (!falhou)
-    return (
-      <img
-        src="/elvolcks-logo-circulo.png"
-        alt="Elvolcks Auto Som"
-        width={size}
-        height={size}
-        className="rounded-full"
-        onError={() => setFalhou(true)}
-      />
-    )
-  // Substituto enquanto o arquivo da logo não está em public/
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" role="img" aria-label="Elvolcks Auto Som">
-      <circle cx="50" cy="50" r="49" fill="#0b0b0b" stroke="#2a2a2a" strokeWidth="2" />
-      <text x="50" y="52" textAnchor="middle" fontFamily="Barlow Condensed, sans-serif" fontWeight="700" fontSize="24" fill="#fff" fontStyle="italic">
-        E<tspan fill="#dc2626">L</tspan>Volcks
-      </text>
-      <text x="50" y="68" textAnchor="middle" fontFamily="Barlow Condensed, sans-serif" fontWeight="600" fontSize="11" letterSpacing="2" fill="#cbd5e1">
-        AUTO SOM
-      </text>
-    </svg>
-  )
+  return <img src="/elvolcks-logo-circulo.png" alt="Elvolcks Auto Som" width={size} height={size} className="rounded-full" />
 }
 
 type Variante = 'primario' | 'secundario' | 'perigo' | 'fantasma'
