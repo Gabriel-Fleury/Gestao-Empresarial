@@ -86,7 +86,7 @@ export interface Lancamento {
   cliente: string
   telefone?: string
   veiculo: string
-  /** Só em serviço realizado */
+  /** Só em serviço realizado e orçamento */
   placa?: string
   /** Quilometragem do veículo no serviço (só em serviço realizado) */
   km?: number

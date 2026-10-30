@@ -42,8 +42,8 @@ export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) 
     if (ed.nfEmitida !== l.nfEmitida || (ed.nfNumero || '') !== (l.nfNumero || '')) mudou.push(`NF: ${l.nfEmitida ? `nº ${l.nfNumero}` : 'não emitida'} → ${ed.nfEmitida ? `nº ${ed.nfNumero}` : 'não emitida'}`)
     if (!mudou.length) return setModo('ver')
     const { placa, km, ...resto } = ed
-    const servico = l.tipo === 'servico' ? { placa: placa.trim() || undefined, km: km || undefined } : {}
-    editar(l.id, { ...resto, ...servico, telefone: ed.telefone || undefined, descricao: ed.descricao.trim() || undefined, nfNumero: ed.nfEmitida ? ed.nfNumero : undefined }, mudou.join('; '))
+    const doVeiculo = l.tipo === 'servico' ? { placa: placa.trim() || undefined, km: km || undefined } : l.tipo === 'orcamento' ? { placa: placa.trim() || undefined } : {}
+    editar(l.id, { ...resto, ...doVeiculo, telefone: ed.telefone || undefined, descricao: ed.descricao.trim() || undefined, nfNumero: ed.nfEmitida ? ed.nfNumero : undefined }, mudou.join('; '))
     setModo('ver')
   }
 
@@ -71,12 +71,8 @@ export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) 
               <Campo rotulo="Cliente"><input className={inputCls} maxLength={MAX_TEXTO} value={ed.cliente} onChange={(e) => { setEd({ ...ed, cliente: e.target.value }); setErroEd('') }} /></Campo>
               <Campo rotulo="Telefone"><input type="tel" inputMode="numeric" className={inputCls} value={ed.telefone} onChange={(e) => setEd({ ...ed, telefone: formatarTelefone(e.target.value) })} placeholder="(66) 99999-9999" /></Campo>
               <Campo rotulo="Veículo"><input className={inputCls} maxLength={MAX_TEXTO} value={ed.veiculo} onChange={(e) => setEd({ ...ed, veiculo: e.target.value })} /></Campo>
-              {l.tipo === 'servico' && (
-                <>
-                  <Campo rotulo="Placa"><input className={`${inputCls} uppercase`} maxLength={8} value={ed.placa} onChange={(e) => setEd({ ...ed, placa: e.target.value.toUpperCase() })} /></Campo>
-                  <Campo rotulo="KM"><input type="number" min={0} inputMode="numeric" className={inputCls} value={ed.km || ''} onChange={(e) => setEd({ ...ed, km: Math.max(0, Math.round(+e.target.value)) })} /></Campo>
-                </>
-              )}
+              {l.tipo !== 'venda' && <Campo rotulo="Placa"><input className={`${inputCls} uppercase`} maxLength={8} value={ed.placa} onChange={(e) => setEd({ ...ed, placa: e.target.value.toUpperCase() })} /></Campo>}
+              {l.tipo === 'servico' && <Campo rotulo="KM"><input type="number" min={0} inputMode="numeric" className={inputCls} value={ed.km || ''} onChange={(e) => setEd({ ...ed, km: Math.max(0, Math.round(+e.target.value)) })} /></Campo>}
               {l.tipo !== 'venda' && (
                 <Campo rotulo="Descrição do serviço" className="sm:col-span-2">
                   <textarea className={`${inputCls} min-h-[72px] resize-y`} maxLength={MAX_DESCRICAO} value={ed.descricao} onChange={(e) => setEd({ ...ed, descricao: e.target.value })} />
@@ -102,7 +98,7 @@ export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) 
               <Info rotulo="Cliente" valor={l.cliente} />
               <Info rotulo="Telefone" valor={l.telefone || '—'} />
               <Info rotulo="Veículo" valor={l.veiculo || '—'} />
-              {l.tipo === 'servico' && <Info rotulo="Placa" valor={l.placa || '—'} />}
+              {l.tipo !== 'venda' && <Info rotulo="Placa" valor={l.placa || '—'} />}
               {l.tipo === 'servico' && <Info rotulo="KM" valor={l.km ? `${qtd(l.km)} km` : '—'} />}
               <Info rotulo={l.tipo === 'servico' ? 'Data do serviço' : l.tipo === 'venda' ? 'Data da venda' : 'Lançado em'} valor={dataHora(l.criadoEm)} />
               <Info rotulo="Lançado por" valor={colaborador(l.criadoPor)?.nome ?? '—'} />

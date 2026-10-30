@@ -55,7 +55,7 @@ export function Lancamentos({ tipo, novoLancamento }: { tipo: TipoLanc; novoLanc
       )}
 
       <div className="mb-3 flex flex-wrap gap-2">
-        <input className={`${inputCls} max-w-xs`} placeholder={`Buscar cliente, telefone, veículo${tipo === 'servico' ? ', placa' : ''} ou número…`} value={busca} onChange={(e) => setBusca(e.target.value)} />
+        <input className={`${inputCls} max-w-xs`} placeholder={`Buscar cliente, telefone, veículo${tipo !== 'venda' ? ', placa' : ''} ou número…`} value={busca} onChange={(e) => setBusca(e.target.value)} />
         <select className={`${inputCls} w-auto!`} value={periodo} onChange={(e) => setPeriodo(e.target.value as Periodo)}>
           <option value="hoje">Hoje</option>
           <option value="7">Últimos 7 dias</option>
