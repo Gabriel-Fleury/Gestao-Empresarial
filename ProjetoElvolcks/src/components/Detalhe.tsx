@@ -1,10 +1,10 @@
 import { useRef, useState, type Ref } from 'react'
 import { createPortal } from 'react-dom'
 import { codigo, useStore } from '../store'
-import { FORMAS_CAIXA, type Forma, type Lancamento } from '../types'
+import { FORMAS_CAIXA, type Forma, type Item, type Lancamento, type Pagamento } from '../types'
 import { baixarPdf } from '../pdf'
 import { comissao, dataCurta, dataDia, dataHora, dinheiro, formatarTelefone, LOJA, NOME_TIPO, orcamentoVencido, pagamentoAtrasado, pagamentoPendente, pagamentoPrazo, qtd, subtotalPecas, telefoneValido, totalLanc, validadeOrcamento } from '../util'
-import { NovoLancamento } from './NovoLancamento'
+import { EditorPecas, NovoLancamento } from './NovoLancamento'
 import { Botao, Cadeado, Campo, InputDinheiro, inputCls, Logo, MAX_DESCRICAO, MAX_TEXTO, Modal, SeloSituacao } from './ui'
 
 export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) {
@@ -13,6 +13,7 @@ export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) 
   const [modo, setModo] = useState<'ver' | 'editar' | 'cancelar' | 'converter' | 'receber'>('ver')
   const [recebidoCom, setRecebidoCom] = useState<Forma>('PIX')
   const [ed, setEd] = useState(() => ({ cliente: l?.cliente ?? '', telefone: l?.telefone ?? '', veiculo: l?.veiculo ?? '', placa: l?.placa ?? '', km: l?.km ?? 0, descricao: l?.descricao ?? '', desconto: l?.desconto ?? 0, nfEmitida: l?.nfEmitida ?? false, nfNumero: l?.nfNumero ?? '' }))
+  const [itensEd, setItensEd] = useState<Item[]>(() => l?.itens.map((i) => ({ ...i })) ?? [])
   const [erroEd, setErroEd] = useState('')
   const [gerando, setGerando] = useState(false)
   const impresso = useRef<HTMLDivElement>(null)
@@ -40,11 +41,37 @@ export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) 
     if (ed.descricao.trim() !== (l.descricao ?? '')) mudou.push(`Descrição do serviço: "${l.descricao || '—'}" → "${ed.descricao.trim() || '—'}"`)
     if (ed.desconto !== l.desconto) mudou.push(`Desconto: ${dinheiro(l.desconto)} → ${dinheiro(ed.desconto)}`)
     if (ed.nfEmitida !== l.nfEmitida || (ed.nfNumero || '') !== (l.nfNumero || '')) mudou.push(`NF: ${l.nfEmitida ? `nº ${l.nfNumero}` : 'não emitida'} → ${ed.nfEmitida ? `nº ${ed.nfNumero}` : 'não emitida'}`)
+
+    const itens = itensEd.filter((i) => i.quantidade > 0)
+    const mudouPecas = mudancasPecas(l.itens, itens, (id) => produto(id)?.nome ?? '(peça excluída)')
+    mudou.push(...mudouPecas)
+    if (!itens.length && !l.maoDeObra) return setErroEd('Deixe pelo menos uma peça (ou a mão de obra).')
+    if (ed.desconto > subtotalPecas({ itens }) + l.maoDeObra) return setErroEd('O desconto é maior que o total.')
+
+    // Total mudou numa venda/serviço: o pagamento acompanha para o caixa continuar batendo
+    const total = totalLanc({ itens, maoDeObra: l.maoDeObra, desconto: ed.desconto })
+    let pagamentos: Pagamento[] | undefined
+    if (l.tipo !== 'orcamento' && total !== totalLanc(l)) {
+      const ajuste = ajustarPagamentos(l.pagamentos, total)
+      if (typeof ajuste === 'string') return setErroEd(ajuste)
+      pagamentos = ajuste
+      mudou.push(`Total: ${dinheiro(totalLanc(l))} → ${dinheiro(total)}`)
+    }
+
     if (!mudou.length) return setModo('ver')
     const { placa, km, ...resto } = ed
     const doVeiculo = l.tipo === 'servico' ? { placa: placa.trim() || undefined, km: km || undefined } : l.tipo === 'orcamento' ? { placa: placa.trim() || undefined } : {}
-    editar(l.id, { ...resto, ...doVeiculo, telefone: ed.telefone || undefined, descricao: ed.descricao.trim() || undefined, nfNumero: ed.nfEmitida ? ed.nfNumero : undefined }, mudou.join('; '))
+    editar(l.id, {
+      ...resto, ...doVeiculo, telefone: ed.telefone || undefined, descricao: ed.descricao.trim() || undefined, nfNumero: ed.nfEmitida ? ed.nfNumero : undefined,
+      ...(mudouPecas.length && { itens }), ...(pagamentos && { pagamentos }),
+    }, mudou.join('; '))
     setModo('ver')
+  }
+
+  const abrirEdicao = () => {
+    setItensEd(l.itens.map((i) => ({ ...i })))
+    setErroEd('')
+    setModo('editar')
   }
 
   const baixar = async () => {
@@ -87,6 +114,13 @@ export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) 
                   </div>
                 </Campo>
               )}
+              <div className="sm:col-span-2">
+                <EditorPecas itens={itensEd} setItens={(v) => { setItensEd(v); setErroEd('') }} avisarEstoque={l.tipo !== 'orcamento'} jaBaixado={l.tipo !== 'orcamento' ? l.itens : []} />
+                <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="text-xs text-slate-500">{l.tipo !== 'orcamento' && 'Ao salvar, o estoque é corrigido pela diferença e o pagamento acompanha o novo total.'}</span>
+                  <span className="font-semibold">Total: <span className="text-emerald-700 tabular-nums">{dinheiro(totalLanc({ itens: itensEd, maoDeObra: l.maoDeObra, desconto: ed.desconto }))}</span></span>
+                </div>
+              </div>
               {erroEd && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 sm:col-span-2">{erroEd}</p>}
               <div className="flex justify-end gap-2 sm:col-span-2">
                 <Botao variante="secundario" onClick={() => setModo('ver')}>Voltar</Botao>
@@ -116,7 +150,7 @@ export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) 
             </dl>
           )}
 
-          <ItensTabela l={l} />
+          {modo !== 'editar' && <ItensTabela l={l} />}
 
           {prazo && l.situacao !== 'cancelado' && (
             <div className={`rounded-xl border-2 p-3 ${atrasado ? 'border-red-400 bg-red-50' : pendente ? 'border-amber-400 bg-amber-50' : 'border-emerald-300 bg-emerald-50'}`}>
@@ -195,7 +229,7 @@ export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) 
               <Botao variante="secundario" onClick={() => window.print()}>Imprimir (A4)</Botao>
               <Botao variante="secundario" onClick={baixar} disabled={gerando}>{gerando ? 'Gerando PDF…' : 'Baixar PDF'}</Botao>
               {ativo && <Botao variante="perigo" onClick={restrito(() => setModo('cancelar'))}>{!isAdmin && <Cadeado />} Cancelar</Botao>}
-              {l.situacao !== 'cancelado' && <Botao variante="secundario" onClick={restrito(() => setModo('editar'))}>{!isAdmin && <Cadeado />} Editar</Botao>}
+              {l.situacao !== 'cancelado' && <Botao variante="secundario" onClick={restrito(abrirEdicao)}>{!isAdmin && <Cadeado />} Editar</Botao>}
               {l.tipo === 'orcamento' && ativo && <Botao onClick={() => setModo('converter')}>Converter em venda/serviço</Botao>}
             </div>
           )}
@@ -213,6 +247,35 @@ export function Detalhe({ id, aoFechar }: { id: string; aoFechar: () => void }) 
       )}
     </>
   )
+}
+
+/** O que mudou nas peças, em texto para o histórico */
+function mudancasPecas(antes: Item[], depois: Item[], nome: (id: string) => string) {
+  const r: string[] = []
+  for (const a of antes) {
+    const d = depois.find((x) => x.produtoId === a.produtoId)
+    if (!d) r.push(`Peça removida: ${nome(a.produtoId)} (${qtd(a.quantidade)})`)
+    else {
+      if (d.quantidade !== a.quantidade) r.push(`${nome(a.produtoId)}: qtd. ${qtd(a.quantidade)} → ${qtd(d.quantidade)}`)
+      if (d.preco !== a.preco) r.push(`${nome(a.produtoId)}: preço ${dinheiro(a.preco)} → ${dinheiro(d.preco)}`)
+    }
+  }
+  for (const d of depois) if (!antes.some((a) => a.produtoId === d.produtoId)) r.push(`Peça adicionada: ${nome(d.produtoId)} (${qtd(d.quantidade)} × ${dinheiro(d.preco)})`)
+  return r
+}
+
+/**
+ * Leva a diferença do total para o "A prazo" ainda não recebido ou, sem ele, para a última forma
+ * de pagamento (um "A prazo" já recebido fica como está). Devolve a mensagem de erro se não der.
+ */
+function ajustarPagamentos(pagamentos: Pagamento[], total: number): Pagamento[] | string {
+  const pendente = pagamentos.findIndex((p) => p.forma === 'A prazo' && !p.pagoEm)
+  const k = pendente >= 0 ? pendente : pagamentos.findLastIndex((p) => !(p.forma === 'A prazo' && p.pagoEm))
+  if (k < 0) return 'O pagamento a prazo já foi recebido: não dá para mudar o total deste lançamento.'
+  const outros = pagamentos.reduce((s, p, j) => (j === k ? s : s + p.valor), 0)
+  const valor = +(total - outros).toFixed(2)
+  if (valor <= 0) return `Com o novo total (${dinheiro(total)}), o pagamento em ${pagamentos[k].forma} ficaria sem valor. Ajuste o desconto ou as peças.`
+  return pagamentos.map((p, j) => (j === k ? { ...p, valor } : p))
 }
 
 function Info({ rotulo, valor, destaque }: { rotulo: string; valor: string; destaque?: boolean }) {

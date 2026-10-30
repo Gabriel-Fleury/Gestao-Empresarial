@@ -197,6 +197,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const dados = Object.fromEntries(Object.entries(mudancas).map(([k, v]) => [k, v === undefined ? deleteField() : v]))
     const b = writeBatch(db)
     b.update(doc(db, 'lancamentos', id), dados)
+    // Peças mudaram numa venda/serviço: o estoque acompanha só a diferença
+    const l = lancamentos.find((x) => x.id === id)
+    if (l && mudancas.itens && l.tipo !== 'orcamento' && l.situacao !== 'cancelado') {
+      const qtdEm = (itens: Lancamento['itens'], p: string) => itens.filter((i) => i.produtoId === p).reduce((s, i) => s + i.quantidade, 0)
+      for (const p of new Set([...l.itens, ...mudancas.itens].map((i) => i.produtoId))) {
+        const delta = qtdEm(mudancas.itens, p) - qtdEm(l.itens, p)
+        if (delta) escreverEstoque(b, [{ produtoId: p, quantidade: Math.abs(delta) }], 'ajuste', delta > 0 ? -1 : 1, codigo(l))
+      }
+    }
     registrar(b, id, descricao)
     try {
       await b.commit()

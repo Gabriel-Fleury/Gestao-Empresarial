@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react'
 import { mensagemErro } from '../firebase'
 import { codigo, useStore } from '../store'
 import { FORMAS, type Forma, type Item, type Lancamento, type TipoLanc } from '../types'
@@ -51,7 +51,7 @@ export function NovoLancamento({ aoFechar, tipoInicial = 'venda', origem }: { ao
 }
 
 function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lancamento; aoFechar: () => void }) {
-  const { produtos, colaboradores, clientes, lancar, avisar, produto } = useStore()
+  const { colaboradores, clientes, lancar, avisar } = useStore()
   const [cliente, setCliente] = useState(origem?.cliente ?? '')
   const [telefone, setTelefone] = useState(origem?.telefone ?? '')
   const [focoCliente, setFocoCliente] = useState(false)
@@ -69,7 +69,6 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
   const [pags, setPags] = useState<Pag[]>([{ forma: 'PIX', valor: 0, parcelas: 2, vencimento: '' }])
   const [nfEmitida, setNfEmitida] = useState(false)
   const [nfNumero, setNfNumero] = useState('')
-  const [busca, setBusca] = useState('')
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
 
@@ -90,18 +89,6 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
       .sort((x, y) => Number(normalizar(y.nome).startsWith(b)) - Number(normalizar(x.nome).startsWith(b)) || x.nome.localeCompare(y.nome))
       .slice(0, 6)
   }, [cliente, telefone, clientes, focoCliente])
-
-  const sugestoes = useMemo(() => {
-    if (!busca.trim()) return []
-    return buscarProdutos(produtos, busca).slice(0, 6)
-  }, [busca, produtos])
-
-  const addItem = (id: string) => {
-    const p = produto(id)!
-    setItens((is) => (is.some((i) => i.produtoId === id) ? is.map((i) => (i.produtoId === id ? { ...i, quantidade: i.quantidade + 1 } : i)) : [...is, { produtoId: id, quantidade: 1, preco: p.preco }]))
-    setBusca('')
-  }
-  const mudarItem = (id: string, campo: 'quantidade' | 'preco', v: number) => setItens((is) => is.map((i) => (i.produtoId === id ? { ...i, [campo]: v } : i)))
 
   const salvar = async () => {
     if (salvando) return
@@ -209,66 +196,7 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
         </Campo>
       </div>
 
-      <div>
-        <Campo rotulo="Peças">
-          <div className="relative">
-            <input className={inputCls} value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar peça pelo nome…" />
-            {sugestoes.length > 0 && (
-              <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
-                {sugestoes.map((p) => (
-                  <li key={p.id}>
-                    <button type="button" onClick={() => addItem(p.id)} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-blue-50">
-                      <span>{p.codigo && <span className="text-xs text-slate-400 tabular-nums">#{p.codigo} </span>}{p.nome}{p.marca && <span className="text-slate-500"> · {p.marca}</span>}</span>
-                      <span className="shrink-0 text-xs text-slate-500">
-                        <span className={p.quantidade <= 1 ? 'font-semibold text-red-600' : ''}>{qtd(p.quantidade)} em estoque</span> · <span className="text-emerald-700">{dinheiro(p.preco)}</span>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Campo>
-        {itens.length > 0 && (
-          <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
-                <tr>
-                  <th className="px-3 py-2">Peça</th>
-                  <th className="w-24 px-2 py-2">Qtd.</th>
-                  <th className="w-32 px-2 py-2">Preço un.</th>
-                  <th className="px-3 py-2 text-right">Subtotal</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {itens.map((i) => {
-                  const p = produto(i.produtoId)!
-                  const fica = p.quantidade - i.quantidade
-                  return (
-                    <tr key={i.produtoId} className="border-t border-slate-100">
-                      <td className="px-3 py-1.5">
-                        {p.nome}
-                        {tipo !== 'orcamento' && fica < 0 && <div className="text-xs text-red-600">Estoque vai ficar em {qtd(fica)}</div>}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input type="number" min={0} step="any" className={`${inputCls} py-1`} value={i.quantidade} onChange={(e) => mudarItem(i.produtoId, 'quantidade', +e.target.value)} />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <InputDinheiro className="py-1" valor={i.preco} aoMudar={(v) => mudarItem(i.produtoId, 'preco', v)} />
-                      </td>
-                      <td className="px-3 py-1.5 text-right text-emerald-700 tabular-nums">{dinheiro(i.quantidade * i.preco)}</td>
-                      <td className="pr-2">
-                        <button onClick={() => setItens((is) => is.filter((x) => x.produtoId !== i.produtoId))} className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label="Remover">✕</button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <EditorPecas itens={itens} setItens={setItens} avisarEstoque={tipo !== 'orcamento'} />
 
       {tipo !== 'venda' && (
         <Campo rotulo="Descrição do serviço">
@@ -399,6 +327,91 @@ function Formulario({ tipo, origem, aoFechar }: { tipo: TipoLanc; origem?: Lanca
         <Botao variante="secundario" onClick={aoFechar}>Cancelar</Botao>
         <Botao onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : `Salvar ${NOME_TIPO[tipo].toLowerCase()}`}</Botao>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Busca e tabela de peças (novo lançamento e edição).
+ * `jaBaixado`: peças que este lançamento já tirou do estoque — contam como disponíveis no aviso de estoque.
+ */
+export function EditorPecas({ itens, setItens, avisarEstoque, jaBaixado = [] }: { itens: Item[]; setItens: Dispatch<SetStateAction<Item[]>>; avisarEstoque: boolean; jaBaixado?: Item[] }) {
+  const { produtos, produto } = useStore()
+  const [busca, setBusca] = useState('')
+
+  const sugestoes = useMemo(() => {
+    if (!busca.trim()) return []
+    return buscarProdutos(produtos, busca).slice(0, 6)
+  }, [busca, produtos])
+
+  const addItem = (id: string) => {
+    const p = produto(id)!
+    setItens((is) => (is.some((i) => i.produtoId === id) ? is.map((i) => (i.produtoId === id ? { ...i, quantidade: i.quantidade + 1 } : i)) : [...is, { produtoId: id, quantidade: 1, preco: p.preco }]))
+    setBusca('')
+  }
+  const mudarItem = (id: string, campo: 'quantidade' | 'preco', v: number) => setItens((is) => is.map((i) => (i.produtoId === id ? { ...i, [campo]: v } : i)))
+
+  return (
+    <div>
+      <Campo rotulo="Peças">
+        <div className="relative">
+          <input className={inputCls} value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar peça pelo nome…" />
+          {sugestoes.length > 0 && (
+            <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+              {sugestoes.map((p) => (
+                <li key={p.id}>
+                  <button type="button" onClick={() => addItem(p.id)} className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-blue-50">
+                    <span>{p.codigo && <span className="text-xs text-slate-400 tabular-nums">#{p.codigo} </span>}{p.nome}{p.marca && <span className="text-slate-500"> · {p.marca}</span>}</span>
+                    <span className="shrink-0 text-xs text-slate-500">
+                      <span className={p.quantidade <= 1 ? 'font-semibold text-red-600' : ''}>{qtd(p.quantidade)} em estoque</span> · <span className="text-emerald-700">{dinheiro(p.preco)}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Campo>
+      {itens.length > 0 && (
+        <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
+              <tr>
+                <th className="px-3 py-2">Peça</th>
+                <th className="w-24 px-2 py-2">Qtd.</th>
+                <th className="w-32 px-2 py-2">Preço un.</th>
+                <th className="px-3 py-2 text-right">Subtotal</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {itens.map((i) => {
+                const p = produto(i.produtoId)
+                const antes = jaBaixado.find((x) => x.produtoId === i.produtoId)?.quantidade ?? 0
+                const fica = p ? p.quantidade + antes - i.quantidade : 0
+                return (
+                  <tr key={i.produtoId} className="border-t border-slate-100">
+                    <td className="px-3 py-1.5">
+                      {p?.nome ?? '(peça excluída)'}
+                      {avisarEstoque && p && fica < 0 && <div className="text-xs text-red-600">Estoque vai ficar em {qtd(fica)}</div>}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input type="number" min={0} step="any" className={`${inputCls} py-1`} value={i.quantidade} onChange={(e) => mudarItem(i.produtoId, 'quantidade', +e.target.value)} />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <InputDinheiro className="py-1" valor={i.preco} aoMudar={(v) => mudarItem(i.produtoId, 'preco', v)} />
+                    </td>
+                    <td className="px-3 py-1.5 text-right text-emerald-700 tabular-nums">{dinheiro(i.quantidade * i.preco)}</td>
+                    <td className="pr-2">
+                      <button type="button" onClick={() => setItens((is) => is.filter((x) => x.produtoId !== i.produtoId))} className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label="Remover">✕</button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
