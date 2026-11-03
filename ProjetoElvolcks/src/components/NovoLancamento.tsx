@@ -14,7 +14,7 @@ interface Pag {
   vencimento: string
 }
 
-export function NovoLancamento({ aoFechar, tipoInicial = 'venda', origem }: { aoFechar: () => void; tipoInicial?: TipoLanc; origem?: Lancamento }) {
+export function NovoLancamento({ aoFechar, tipoInicial = 'servico', origem }: { aoFechar: () => void; tipoInicial?: TipoLanc; origem?: Lancamento }) {
   const [tipo, setTipo] = useState<TipoLanc>(origem ? 'servico' : tipoInicial)
   const tipos: TipoLanc[] = origem ? ['venda', 'servico'] : ['orcamento', 'venda', 'servico']
 

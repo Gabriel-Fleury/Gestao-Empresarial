@@ -116,7 +116,7 @@ function Shell() {
         </div>
 
         <main className="mx-auto max-w-7xl px-4 py-5 sm:px-8">
-          {pagina === 'inicio' && <Inicio novoLancamento={() => setNovo({ tipo: 'venda' })} ir={ir} />}
+          {pagina === 'inicio' && <Inicio novoLancamento={() => setNovo({ tipo: 'servico' })} ir={ir} />}
           {pagina === 'vendas' && <Lancamentos key="v" tipo="venda" novoLancamento={(tipo) => setNovo({ tipo })} />}
           {pagina === 'orcamentos' && <Lancamentos key="o" tipo="orcamento" novoLancamento={(tipo) => setNovo({ tipo })} />}
           {pagina === 'servicos' && <Lancamentos key="s" tipo="servico" novoLancamento={(tipo) => setNovo({ tipo })} />}
