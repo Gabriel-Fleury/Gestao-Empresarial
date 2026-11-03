@@ -17,10 +17,11 @@ export function Estoque() {
   const [aba, setAba] = useState<'produtos' | 'historico'>('produtos')
   const [busca, setBusca] = useState('')
   const [soBaixo, setSoBaixo] = useState(false)
+  const [soSemCusto, setSoSemCusto] = useState(false)
   const [mexendo, setMexendo] = useState<{ p: Produto; tipo: 'entrada' | 'ajuste' } | null>(null)
   const [novo, setNovo] = useState(false)
 
-  const lista = buscarProdutos(produtos, busca).filter((p) => !soBaixo || p.quantidade <= 1)
+  const lista = buscarProdutos(produtos, busca).filter((p) => (!soBaixo || p.quantidade <= 1) && (!soSemCusto || !p.custo))
 
   // Valor parado na prateleira (quantidade negativa não conta)
   const emEstoque = produtos.filter((p) => p.quantidade > 0)
@@ -70,6 +71,9 @@ export function Estoque() {
             <input className={`${inputCls} max-w-xs`} placeholder="Buscar por código, nome ou marca…" value={busca} onChange={(e) => setBusca(e.target.value)} />
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" className="size-4 accent-red-600" checked={soBaixo} onChange={(e) => setSoBaixo(e.target.checked)} /> Só estoque baixo
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" className="size-4 accent-amber-600" checked={soSemCusto} onChange={(e) => setSoSemCusto(e.target.checked)} /> Sem preço de custo
             </label>
           </>
         )}
