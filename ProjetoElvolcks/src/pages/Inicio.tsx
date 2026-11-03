@@ -3,18 +3,20 @@ import { BuscaPecas } from '../components/BuscaPecas'
 import { Detalhe } from '../components/Detalhe'
 import { Cadeado, Painel, Selo, SeloSituacao, Titulo, Vazio } from '../components/ui'
 import { codigo, useStore } from '../store'
-import { chaveDia, dinheiro, ehHoje, entraNoCaixa, hora, NOME_TIPO, qtd, recebidoNoDia, totalLanc } from '../util'
+import { chaveDia, dataDia, dinheiro, ehHoje, entraNoCaixa, hora, NOME_TIPO, pagamentoAtrasado, pagamentoPendente, pagamentoPrazo, recebidoNoDia, totalLanc } from '../util'
 import type { Pagina } from '../App'
 
 export function Inicio({ novoLancamento, ir }: { novoLancamento: () => void; ir: (p: Pagina) => void }) {
-  const { lancamentos, produtos, isAdmin, avisoAdmin, usuario, colaborador } = useStore()
+  const { lancamentos, isAdmin, avisoAdmin, usuario, colaborador } = useStore()
   const [aberto, setAberto] = useState<string | null>(null)
   const deHoje = lancamentos.filter((l) => ehHoje(l.criadoEm))
   // À vista lançado hoje + a prazo pago hoje
   const caixaHoje = lancamentos.flatMap((l) => recebidoNoDia(l, chaveDia(new Date()))).reduce((s, p) => s + p.valor, 0)
   const servicosHoje = deHoje.filter((l) => l.tipo === 'servico' && l.situacao !== 'cancelado').length
   const orcHoje = deHoje.filter((l) => l.tipo === 'orcamento').length
-  const baixo = produtos.filter((p) => p.quantidade <= 1).sort((a, b) => a.quantidade - b.quantidade)
+  // Vendas e serviços a prazo ainda não pagos: o vencimento mais antigo vem primeiro
+  const aReceber = lancamentos.filter(pagamentoPendente).sort((a, b) => (pagamentoPrazo(a)!.vencimento ?? '').localeCompare(pagamentoPrazo(b)!.vencimento ?? ''))
+  const totalAReceber = aReceber.reduce((s, l) => s + pagamentoPrazo(l)!.valor, 0)
 
   const saudacao = new Date().getHours() < 12 ? 'Bom dia' : new Date().getHours() < 18 ? 'Boa tarde' : 'Boa noite'
   const hoje = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -46,17 +48,32 @@ export function Inicio({ novoLancamento, ir }: { novoLancamento: () => void; ir:
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1.6fr]">
-        <Painel titulo={<span className="flex items-center gap-2">Estoque baixo <Selo cor="vermelho">{baixo.length}</Selo></span>} acao={<button onClick={() => ir('estoque')} className="group inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 hover:text-blue-900">Ver estoque <span className="transition-transform group-hover:translate-x-0.5">→</span></button>}>
-          {baixo.length ? (
-            <ul className="divide-y divide-slate-100">
-              {baixo.map((p) => (
-                <li key={p.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-                  <span>{p.nome}</span>
-                  <span className={`shrink-0 rounded-md px-2 py-0.5 font-semibold tabular-nums ${p.quantidade < 0 ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700'}`}>{qtd(p.quantidade)}</span>
-                </li>
-              ))}
+        <Painel
+          titulo={<span className="flex items-center gap-2">A receber <Selo cor={aReceber.some(pagamentoAtrasado) ? 'vermelho' : 'ambar'}>{aReceber.length}</Selo></span>}
+          acao={aReceber.length > 0 && <span className="text-sm font-semibold text-emerald-700 tabular-nums">{dinheiro(totalAReceber)}</span>}
+        >
+          {aReceber.length ? (
+            <ul className="max-h-[32rem] divide-y divide-slate-100 overflow-y-auto">
+              {aReceber.map((l) => {
+                const prazo = pagamentoPrazo(l)!
+                const atrasado = pagamentoAtrasado(l)
+                return (
+                  <li key={l.id}>
+                    <button onClick={() => setAberto(l.id)} className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm ${atrasado ? 'bg-red-50 hover:bg-red-100/70' : 'hover:bg-slate-50'}`}>
+                      <span className={`w-14 shrink-0 font-mono text-xs font-semibold ${l.tipo === 'venda' ? 'text-blue-700' : 'text-indigo-700'}`}>{codigo(l)}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{l.cliente}</span>
+                        <span className={`block truncate text-xs ${atrasado ? 'font-semibold text-red-700' : 'text-slate-500'}`}>
+                          {NOME_TIPO[l.tipo]} · {atrasado ? 'Atrasado desde' : 'Pagar até'} {prazo.vencimento ? dataDia(prazo.vencimento) : '—'}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-right text-emerald-700 tabular-nums">{dinheiro(prazo.valor)}</span>
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
-          ) : <Vazio>Nenhuma peça com estoque baixo.</Vazio>}
+          ) : <Vazio>Nenhum pagamento a prazo pendente.</Vazio>}
         </Painel>
 
         <Painel titulo="Últimos lançamentos">
